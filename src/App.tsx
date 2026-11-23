@@ -649,7 +649,7 @@ export default function App() {
           </div>
           <div className="brand-text">
             <span className="brand-pill">PORTAL SAC</span>
-            <small>Atendimento &amp; Cobrança</small>
+            <small>Proporcionais</small>
           </div>
         </div>
 
@@ -689,7 +689,7 @@ export default function App() {
 
           <div className="side-foot">
             <strong>Vital Net Telecom</strong>
-            <span>Uso interno · Equipe SAC v2.0</span>
+            <span>Uso interno · Criado por Giliel</span>
           </div>
         </div>
       </aside>
@@ -1007,7 +1007,7 @@ export default function App() {
           )}
 
           <footer className="footer">
-            <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio ao SAC <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
+            <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
           </footer>
         </div>
       </main>
