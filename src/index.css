@@ -607,6 +607,41 @@ button {
   flex: 1;
 }
 
+.sample-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #fff9db;
+  border: 1px solid #ffe066;
+  color: #7c5800;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
+
+.sample-banner-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59f00;
+  flex-shrink: 0;
+}
+
+.sample-inline-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #b05c00;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.sample-inline-link:hover {
+  color: #7c3d00;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -621,10 +656,25 @@ button {
   min-width: 0;
 }
 
-.field > span {
+.field > span,
+.field-label-row span:first-child {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.sample-badge {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8f6200;
+  background: #fff3bf;
+  border: 1px solid #ffd43b;
+  padding: 2px 7px;
+  border-radius: 99px;
+  white-space: nowrap;
 }
 
 .input-wrap {
@@ -656,6 +706,13 @@ button {
   transition: all 0.16s ease;
 }
 
+.field.is-sample input {
+  border-style: dashed;
+  border-color: #e6c35c;
+  background: #fffdf5;
+  color: #5c4b1c;
+}
+
 .input-wrap.has-prefix input {
   padding-left: 36px;
 }
@@ -666,9 +723,11 @@ button {
 }
 
 .field input:focus {
+  border-style: solid;
   border-color: var(--vn-cyan);
   box-shadow: 0 0 0 3.5px rgba(70, 169, 204, 0.18);
   background: #ffffff;
+  color: var(--text-main);
 }
 
 .field small {
@@ -713,6 +772,13 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.secondary-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .primary-btn {
@@ -747,7 +813,7 @@ button {
   color: var(--text-secondary);
   font-size: 11.5px;
   font-weight: 600;
-  padding: 8px 12px;
+  padding: 8px 11px;
   border-radius: 8px;
   transition: all 0.15s ease;
 }
@@ -755,6 +821,15 @@ button {
 .text-btn:hover {
   background: #e9eff8;
   color: var(--vn-blue);
+}
+
+.clear-btn {
+  color: #b03a2e;
+}
+
+.clear-btn:hover {
+  background: #feeceb;
+  color: #922b21;
 }
 
 .danger-btn:hover {
