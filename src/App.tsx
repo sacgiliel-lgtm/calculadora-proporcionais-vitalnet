@@ -385,7 +385,7 @@ export default function App() {
 
           <div className="side-foot">
             <strong>Vital Net Telecom</strong>
-            <span>Uso interno · Equipe SAC v2.0</span>
+            <span>Uso interno · Criado por Giliel</span>
           </div>
         </div>
       </aside>
