@@ -1259,6 +1259,19 @@ button {
   font-weight: 700;
 }
 
+.confidential-note {
+  margin: 7px auto 0;
+  max-width: 820px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.confidential-note strong {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
 /* ==================== CENTERED MODAL (COMO FUNCIONA) ==================== */
 .modal-backdrop {
   position: fixed;
