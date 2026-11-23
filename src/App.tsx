@@ -649,7 +649,7 @@ export default function App() {
           </div>
           <div className="brand-text">
             <span className="brand-pill">PORTAL SAC</span>
-            <small>Proporcionais</small>
+            <small>Atendimento &amp; Cobrança</small>
           </div>
         </div>
 
@@ -689,7 +689,7 @@ export default function App() {
 
           <div className="side-foot">
             <strong>Vital Net Telecom</strong>
-            <span>Uso interno · Criado por Giliel</span>
+            <span>Uso interno · Equipe SAC v2.0</span>
           </div>
         </div>
       </aside>
@@ -756,7 +756,7 @@ export default function App() {
                   <span className="step">01</span>
                   <div>
                     <h3>Parâmetros da simulação</h3>
-                    <p>Preencha os valores e datas do atendimento.</p>
+                    <p>O cálculo e a mensagem são atualizados em tempo real enquanto você preenche.</p>
                   </div>
                 </div>
                 <span className="required-note">Campos obrigatórios</span>
@@ -779,22 +779,10 @@ export default function App() {
               </div>
 
               <div className="form-actions">
-                <button
-                  className="primary-btn"
-                  onClick={() => {
-                    if (!c.valid) {
-                      setToast("Preencha os campos obrigatórios e confira as datas.");
-                      return;
-                    }
-                    setToast("Cálculo atualizado com sucesso.");
-                  }}
-                >
-                  <span>Atualizar cálculo</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                </button>
+                <div className="realtime-hint">
+                  <span className="realtime-dot" />
+                  <span>Cálculo automático em tempo real ao digitar</span>
+                </div>
                 <div className="secondary-actions">
                   <button type="button" className="text-btn clear-btn" onClick={clearFields}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
@@ -1019,7 +1007,7 @@ export default function App() {
           )}
 
           <footer className="footer">
-            <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
+            <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio ao SAC <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
           </footer>
         </div>
       </main>
