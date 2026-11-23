@@ -18,6 +18,18 @@ const moneyNumber = (s: string) => Number(s.replace(/\./g, "").replace(",", ".")
 const round5 = (n: number) => Math.round(n / 5) * 5;
 const safe = (n: number) => Number(n.toFixed(2));
 
+const DEFAULTS = {
+  monthly: "80,00",
+  due: "2026-10-29",
+  blocked: "2026-11-06",
+  nextDue: "2026-11-29",
+  oldDue: "2026-11-25",
+  newDue: "2026-12-10",
+  oldPlan: "100,00",
+  newPlan: "160,00",
+  upgradeDue: "2026-12-10",
+};
+
 const modes: { id: Mode; label: string; short: string; badge: string; icon: JSX.Element }[] = [
   {
     id: "reativacao",
@@ -71,6 +83,7 @@ function Field({
   placeholder,
   prefix,
   required = true,
+  isSample = false,
 }: {
   label: string;
   value: string;
@@ -80,13 +93,18 @@ function Field({
   placeholder?: string;
   prefix?: string;
   required?: boolean;
+  isSample?: boolean;
 }) {
   const isEmpty = required && value.trim() === "";
   return (
-    <label className={`field ${isEmpty ? "is-empty" : ""}`}>
+    <label className={`field ${isEmpty ? "is-empty" : ""} ${!isEmpty && isSample ? "is-sample" : ""}`}>
       <div className="field-label-row">
         <span>{label}</span>
-        {isEmpty && <span className="empty-badge">Campo vazio</span>}
+        {isEmpty ? (
+          <span className="empty-badge">Campo vazio</span>
+        ) : (
+          isSample && <span className="sample-badge">Exemplo</span>
+        )}
       </div>
       <div className={`input-wrap ${prefix ? "has-prefix" : ""} ${isEmpty ? "invalid" : ""}`}>
         {prefix && <span className="input-prefix">{prefix}</span>}
@@ -127,18 +145,19 @@ function ResultLine({
 }
 
 export default function App() {
+  const [defaultReactivation] = useState(() => today());
   const [mode, setMode] = useState<Mode>("reativacao");
-  const [monthly, setMonthly] = useState("80,00");
-  const [due, setDue] = useState("2026-10-29");
-  const [blocked, setBlocked] = useState("2026-11-06");
-  const [reactivation, setReactivation] = useState(today());
-  const [nextDue, setNextDue] = useState("2026-11-29");
-  const [oldDue, setOldDue] = useState("2026-11-25");
-  const [newDue, setNewDue] = useState("2026-12-10");
-  const [oldPlan, setOldPlan] = useState("100,00");
-  const [newPlan, setNewPlan] = useState("160,00");
+  const [monthly, setMonthly] = useState(DEFAULTS.monthly);
+  const [due, setDue] = useState(DEFAULTS.due);
+  const [blocked, setBlocked] = useState(DEFAULTS.blocked);
+  const [reactivation, setReactivation] = useState(defaultReactivation);
+  const [nextDue, setNextDue] = useState(DEFAULTS.nextDue);
+  const [oldDue, setOldDue] = useState(DEFAULTS.oldDue);
+  const [newDue, setNewDue] = useState(DEFAULTS.newDue);
+  const [oldPlan, setOldPlan] = useState(DEFAULTS.oldPlan);
+  const [newPlan, setNewPlan] = useState(DEFAULTS.newPlan);
   const [equipmentDate, setEquipmentDate] = useState("");
-  const [upgradeDue, setUpgradeDue] = useState("2026-12-10");
+  const [upgradeDue, setUpgradeDue] = useState(DEFAULTS.upgradeDue);
   const [copied, setCopied] = useState(false);
   const [history, setHistory] = useState<Saved[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -167,6 +186,22 @@ export default function App() {
   const m = moneyNumber(monthly),
     oldM = moneyNumber(oldPlan),
     newM = moneyNumber(newPlan);
+
+  const hasSampleValues = useMemo(() => {
+    if (mode === "reativacao") {
+      return (
+        monthly === DEFAULTS.monthly ||
+        due === DEFAULTS.due ||
+        blocked === DEFAULTS.blocked ||
+        reactivation === defaultReactivation ||
+        nextDue === DEFAULTS.nextDue
+      );
+    }
+    if (mode === "vencimento") {
+      return monthly === DEFAULTS.monthly || oldDue === DEFAULTS.oldDue || newDue === DEFAULTS.newDue;
+    }
+    return oldPlan === DEFAULTS.oldPlan || newPlan === DEFAULTS.newPlan || upgradeDue === DEFAULTS.upgradeDue;
+  }, [mode, monthly, due, blocked, reactivation, defaultReactivation, nextDue, oldDue, newDue, oldPlan, newPlan, upgradeDue]);
 
   const calc = useMemo(() => {
     if (mode === "reativacao") {
@@ -255,19 +290,39 @@ export default function App() {
     }
   };
 
+  const clearFields = () => {
+    if (mode === "reativacao") {
+      setMonthly("");
+      setDue("");
+      setBlocked("");
+      setReactivation("");
+      setNextDue("");
+    } else if (mode === "vencimento") {
+      setMonthly("");
+      setOldDue("");
+      setNewDue("");
+    } else {
+      setOldPlan("");
+      setNewPlan("");
+      setEquipmentDate("");
+      setUpgradeDue("");
+    }
+    setToast("Campos limpos. Preencha os dados do cliente.");
+  };
+
   const resetFields = () => {
-    setMonthly("80,00");
-    setDue("2026-10-29");
-    setBlocked("2026-11-06");
-    setReactivation(today());
-    setNextDue("2026-11-29");
-    setOldDue("2026-11-25");
-    setNewDue("2026-12-10");
-    setOldPlan("100,00");
-    setNewPlan("160,00");
+    setMonthly(DEFAULTS.monthly);
+    setDue(DEFAULTS.due);
+    setBlocked(DEFAULTS.blocked);
+    setReactivation(defaultReactivation);
+    setNextDue(DEFAULTS.nextDue);
+    setOldDue(DEFAULTS.oldDue);
+    setNewDue(DEFAULTS.newDue);
+    setOldPlan(DEFAULTS.oldPlan);
+    setNewPlan(DEFAULTS.newPlan);
     setEquipmentDate("");
-    setUpgradeDue("2026-12-10");
-    setToast("Campos restaurados para o padrão.");
+    setUpgradeDue(DEFAULTS.upgradeDue);
+    setToast("Valores de exemplo restaurados.");
   };
 
   const inputFields = () => {
@@ -275,8 +330,21 @@ export default function App() {
       return (
         <>
           <div className="field-grid">
-            <Field label="Valor da mensalidade" prefix="R$" value={monthly} onChange={setMonthly} placeholder="80,00" />
-            <Field label="Vencimento do boleto considerado" value={due} onChange={setDue} type="date" />
+            <Field
+              label="Valor da mensalidade"
+              prefix="R$"
+              value={monthly}
+              onChange={setMonthly}
+              placeholder="80,00"
+              isSample={monthly === DEFAULTS.monthly}
+            />
+            <Field
+              label="Vencimento do boleto considerado"
+              value={due}
+              onChange={setDue}
+              type="date"
+              isSample={due === DEFAULTS.due}
+            />
           </div>
           <div className="field-grid">
             <Field
@@ -284,11 +352,24 @@ export default function App() {
               value={blocked}
               onChange={setBlocked}
               type="date"
+              isSample={blocked === DEFAULTS.blocked}
               hint="Data em que o sistema bloqueou a conexão (considerando feriados/finais de semana)."
             />
-            <Field label="Data da reativação" value={reactivation} onChange={setReactivation} type="date" />
+            <Field
+              label="Data da reativação"
+              value={reactivation}
+              onChange={setReactivation}
+              type="date"
+              isSample={reactivation === defaultReactivation}
+            />
           </div>
-          <Field label="Próximo vencimento" value={nextDue} onChange={setNextDue} type="date" />
+          <Field
+            label="Próximo vencimento"
+            value={nextDue}
+            onChange={setNextDue}
+            type="date"
+            isSample={nextDue === DEFAULTS.nextDue}
+          />
           <div className="notice">
             <span className="notice-icon">ℹ</span>
             <div>
@@ -302,10 +383,29 @@ export default function App() {
       return (
         <>
           <div className="field-grid">
-            <Field label="Valor da mensalidade" prefix="R$" value={monthly} onChange={setMonthly} placeholder="80,00" />
-            <Field label="Vencimento atual" value={oldDue} onChange={setOldDue} type="date" />
+            <Field
+              label="Valor da mensalidade"
+              prefix="R$"
+              value={monthly}
+              onChange={setMonthly}
+              placeholder="80,00"
+              isSample={monthly === DEFAULTS.monthly}
+            />
+            <Field
+              label="Vencimento atual"
+              value={oldDue}
+              onChange={setOldDue}
+              type="date"
+              isSample={oldDue === DEFAULTS.oldDue}
+            />
           </div>
-          <Field label="Novo vencimento" value={newDue} onChange={setNewDue} type="date" />
+          <Field
+            label="Novo vencimento"
+            value={newDue}
+            onChange={setNewDue}
+            type="date"
+            isSample={newDue === DEFAULTS.newDue}
+          />
           <div className="notice">
             <span className="notice-icon">ℹ</span>
             <div>
@@ -318,8 +418,22 @@ export default function App() {
     return (
       <>
         <div className="field-grid">
-          <Field label="Mensalidade atual" prefix="R$" value={oldPlan} onChange={setOldPlan} placeholder="100,00" />
-          <Field label="Nova mensalidade" prefix="R$" value={newPlan} onChange={setNewPlan} placeholder="160,00" />
+          <Field
+            label="Mensalidade atual"
+            prefix="R$"
+            value={oldPlan}
+            onChange={setOldPlan}
+            placeholder="100,00"
+            isSample={oldPlan === DEFAULTS.oldPlan}
+          />
+          <Field
+            label="Nova mensalidade"
+            prefix="R$"
+            value={newPlan}
+            onChange={setNewPlan}
+            placeholder="160,00"
+            isSample={newPlan === DEFAULTS.newPlan}
+          />
         </div>
         <div className="field-grid">
           <Field
@@ -330,7 +444,13 @@ export default function App() {
             required={false}
             hint="Campo opcional: se ficar em branco, será usada a data de hoje."
           />
-          <Field label="Próximo vencimento" value={upgradeDue} onChange={setUpgradeDue} type="date" />
+          <Field
+            label="Próximo vencimento"
+            value={upgradeDue}
+            onChange={setUpgradeDue}
+            type="date"
+            isSample={upgradeDue === DEFAULTS.upgradeDue}
+          />
         </div>
         <div className="notice">
           <span className="notice-icon">ℹ</span>
@@ -642,7 +762,21 @@ export default function App() {
                 <span className="required-note">Campos obrigatórios</span>
               </div>
 
-              <div className="form-body">{inputFields()}</div>
+              <div className="form-body">
+                {hasSampleValues && (
+                  <div className="sample-banner">
+                    <span className="sample-banner-dot" />
+                    <span>
+                      Há campos preenchidos com <strong>valores de exemplo</strong>. Altere-os ou clique em{" "}
+                      <button type="button" className="sample-inline-link" onClick={clearFields}>
+                        Limpar campos
+                      </button>{" "}
+                      para iniciar um novo atendimento.
+                    </span>
+                  </div>
+                )}
+                {inputFields()}
+              </div>
 
               <div className="form-actions">
                 <button
@@ -661,9 +795,14 @@ export default function App() {
                     <polyline points="12 5 19 12 12 19" />
                   </svg>
                 </button>
-                <button className="text-btn" onClick={resetFields}>
-                  Restaurar padrão
-                </button>
+                <div className="secondary-actions">
+                  <button type="button" className="text-btn clear-btn" onClick={clearFields}>
+                    Limpar campos
+                  </button>
+                  <button type="button" className="text-btn" onClick={resetFields}>
+                    Restaurar exemplo
+                  </button>
+                </div>
               </div>
             </section>
 
