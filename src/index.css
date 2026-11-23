@@ -778,7 +778,8 @@ button {
 .secondary-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .primary-btn {
@@ -808,32 +809,61 @@ button {
 }
 
 .text-btn {
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-secondary);
+  border: 1.5px solid var(--border-strong);
+  background: #ffffff;
+  color: var(--vn-navy);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 11.5px;
-  font-weight: 600;
-  padding: 8px 11px;
-  border-radius: 8px;
-  transition: all 0.15s ease;
+  font-weight: 700;
+  padding: 9px 13px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: 0 2px 6px rgba(15, 40, 81, 0.06);
+  transition: all 0.16s ease;
+}
+
+.text-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .text-btn:hover {
-  background: #e9eff8;
+  transform: translateY(-1px);
+  background: #eef4fc;
+  border-color: var(--vn-blue);
   color: var(--vn-blue);
 }
 
 .clear-btn {
-  color: #b03a2e;
+  background: #fff5f5;
+  border-color: #ffa8a8;
+  color: #c92a2a;
 }
 
 .clear-btn:hover {
-  background: #feeceb;
-  color: #922b21;
+  background: #ffe3e3;
+  border-color: #e03131;
+  color: #a61e1e;
+}
+
+.restore-btn {
+  background: #fffdf0;
+  border-color: #ffe066;
+  color: #8f6200;
+}
+
+.restore-btn:hover {
+  background: #fff3bf;
+  border-color: #f59f00;
+  color: #704800;
 }
 
 .danger-btn:hover {
   background: #feeceb;
+  border-color: #ffa8a8;
   color: #c2392b;
 }
 
