@@ -26,11 +26,12 @@ Durante atendimentos de regularização financeira, alteração cadastral de ven
 
 A **Calculadora de Proporcionais** automatiza esse processo em tempo real, evitando erros manuais de contagem de dias ou arredondamento, além de padronizar a comunicação escrita com o cliente.
 
-### Premissas Gerais de Cálculo
-- **Base mensal padrão:** Todos os cálculos utilizam o divisor comercial de **$30\text{ dias}$** para apuração do valor diário.
-- **Precisão intermediária:** Os valores diários e subtotais são tratados com arredondamento padrão de duas casas decimais antes da consolidação.
-- **Arredondamento comercial:** O valor proporcional final é arredondado para o **múltiplo de $\text{R\$ } 5,00$ mais próximo**, conforme a fórmula:
-  $$\text{Valor Arredondado} = \text{round}\left(\frac{\text{Valor Bruto}}{5}\right) \times 5$$
+## Premissas Gerais de Cálculo
+
+* **Base mensal:** Todas as proporções utilizam a divisão por **30 dias** (`valor / 30`) para obter o valor diário.
+* **Precisão decimal:** Os cálculos intermediários são arredondados para **2 casas decimais** (`Number(valor.toFixed(2))`).
+* **Arredondamento comercial:** Os valores proporcionais são arredondados para o **múltiplo de R$ 5,00 mais próximo** (`Math.round(valor / 5) * 5`).
+* **Diferença de dias:** O intervalo entre datas é calculado em dias corridos (`86.400.000 ms` por dia).
 
 ---
 
