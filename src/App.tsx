@@ -70,6 +70,7 @@ function Field({
   hint,
   placeholder,
   prefix,
+  required = true,
 }: {
   label: string;
   value: string;
@@ -78,15 +79,30 @@ function Field({
   hint?: string;
   placeholder?: string;
   prefix?: string;
+  required?: boolean;
 }) {
+  const isEmpty = required && value.trim() === "";
   return (
-    <label className="field">
-      <span>{label}</span>
-      <div className={`input-wrap ${prefix ? "has-prefix" : ""}`}>
-        {prefix && <span className="input-prefix">{prefix}</span>}
-        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+    <label className={`field ${isEmpty ? "is-empty" : ""}`}>
+      <div className="field-label-row">
+        <span>{label}</span>
+        {isEmpty && <span className="empty-badge">Campo vazio</span>}
       </div>
-      {hint && <small>{hint}</small>}
+      <div className={`input-wrap ${prefix ? "has-prefix" : ""} ${isEmpty ? "invalid" : ""}`}>
+        {prefix && <span className="input-prefix">{prefix}</span>}
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          aria-invalid={isEmpty}
+        />
+      </div>
+      {isEmpty ? (
+        <small className="error-text">Preencha este campo para calcular corretamente.</small>
+      ) : (
+        hint && <small>{hint}</small>
+      )}
     </label>
   );
 }
@@ -197,7 +213,7 @@ export default function App() {
 
   const save = () => {
     if (!(calc as any).valid) {
-      setToast("Preencha os campos e confira as datas para calcular.");
+      setToast("Preencha os campos obrigatórios e confira as datas.");
       return;
     }
     const c = calc as any;
@@ -301,7 +317,8 @@ export default function App() {
             value={equipmentDate}
             onChange={setEquipmentDate}
             type="date"
-            hint="Em branco utiliza automaticamente a data de hoje."
+            required={false}
+            hint="Campo opcional: se ficar em branco, será usada a data de hoje."
           />
           <Field label="Próximo vencimento" value={upgradeDue} onChange={setUpgradeDue} type="date" />
         </div>
@@ -422,7 +439,7 @@ export default function App() {
                   className="primary-btn"
                   onClick={() => {
                     if (!c.valid) {
-                      setToast("Confira os campos e as datas informadas.");
+                      setToast("Preencha os campos obrigatórios e confira as datas.");
                       return;
                     }
                     setToast("Cálculo atualizado com sucesso.");
@@ -550,7 +567,7 @@ export default function App() {
 
                 {!c.valid && (
                   <div className="validation">
-                    Preencha os campos corretamente e verifique se as datas estão em ordem cronológica.
+                    Existem campos obrigatórios vazios ou datas fora de ordem. Revise os campos destacados em vermelho.
                   </div>
                 )}
 
