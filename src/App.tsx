@@ -142,6 +142,7 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [history, setHistory] = useState<Saved[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [toast, setToast] = useState("");
 
   useEffect(() => {
@@ -153,6 +154,15 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("vitalnet-proportional-history", JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    if (!showHowItWorks) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowHowItWorks(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showHowItWorks]);
 
   const m = moneyNumber(monthly),
     oldM = moneyNumber(oldPlan),
@@ -335,6 +345,180 @@ export default function App() {
   const c = calc as any;
   const activeModeObj = modes.find((x) => x.id === mode)!;
 
+  const renderHowItWorksSteps = () => {
+    if (mode === "reativacao") {
+      return (
+        <div className="how-steps">
+          <div className="how-step">
+            <span className="how-num">1</span>
+            <div>
+              <strong>Valor diário da mensalidade (÷ 30)</strong>
+              <p>
+                Dividimos a mensalidade de <b>{brl(m)}</b> por <b>30 dias</b> (base padrão do cálculo) para encontrar o custo diário do serviço.
+              </p>
+              <code>
+                {brl(m)} ÷ 30 = {brl(c.daily)} por dia
+              </code>
+            </div>
+          </div>
+
+          <div className="how-step">
+            <span className="how-num">2</span>
+            <div>
+              <strong>Dias utilizados após o vencimento até o bloqueio</strong>
+              <p>
+                Calculamos a diferença de dias entre o vencimento considerado (<b>{dateBR(due)}</b>) e a data efetiva do bloqueio (<b>{dateBR(blocked)}</b>) e multiplicamos pelo valor diário.
+              </p>
+              <code>
+                {c.usedDays} dias × {brl(c.daily)} = {brl(c.used)}
+              </code>
+            </div>
+          </div>
+
+          <div className="how-step">
+            <span className="how-num">3</span>
+            <div>
+              <strong>Dias da reativação até o próximo vencimento (inclusivo)</strong>
+              <p>
+                Contamos da data da reativação (<b>{dateBR(reactivation)}</b>) até o próximo vencimento (<b>{dateBR(nextDue)}</b>) incluindo ambos os dias (<code>+ 1</code>) e multiplicamos pelo valor diário.
+              </p>
+              <code>
+                {c.futureDays} dias × {brl(c.daily)} = {brl(c.future)}
+              </code>
+            </div>
+          </div>
+
+          <div className="how-step">
+            <span className="how-num">4</span>
+            <div>
+              <strong>Soma e arredondamento para múltiplo de R$ 5,00</strong>
+              <p>
+                Somamos os dois períodos (<b>{brl(c.used)} + {brl(c.future)} = {brl(c.raw)}</b>) e arredondamos o resultado para o <b>múltiplo de R$ 5,00 mais próximo</b>.
+              </p>
+              <code>
+                Subtotal {brl(c.raw)} → Arredondado: {brl(c.rounded)} (Total: {brl(c.total)})
+              </code>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "vencimento") {
+      return (
+        <div className="how-steps">
+          <div className="how-step">
+            <span className="how-num">1</span>
+            <div>
+              <strong>Valor diário da mensalidade (÷ 30)</strong>
+              <p>
+                Dividimos a mensalidade de <b>{brl(m)}</b> por <b>30 dias</b> para obter o valor proporcional de cada dia adicional.
+              </p>
+              <code>
+                {brl(m)} ÷ 30 = {brl(c.daily)} por dia
+              </code>
+            </div>
+          </div>
+
+          <div className="how-step">
+            <span className="how-num">2</span>
+            <div>
+              <strong>Intervalo entre o vencimento atual e o novo vencimento</strong>
+              <p>
+                Calculamos quantos dias existem entre o vencimento atual (<b>{dateBR(oldDue)}</b>) e o novo vencimento (<b>{dateBR(newDue)}</b>) e multiplicamos pelo valor diário.
+              </p>
+              <code>
+                {c.days} dias × {brl(c.daily)} = {brl(c.raw)} (bruto)
+              </code>
+            </div>
+          </div>
+
+          <div className="how-step">
+            <span className="how-num">3</span>
+            <div>
+              <strong>Arredondamento do proporcional (múltiplo de R$ 5,00)</strong>
+              <p>
+                O valor proporcional bruto de <b>{brl(c.raw)}</b> é arredondado para o múltiplo de <b>R$ 5,00</b> mais próximo.
+              </p>
+              <code>
+                {brl(c.raw)} → Proporcional arredondado: {brl(c.rounded)}
+              </code>
+            </div>
+          </div>
+
+          <div className="how-step">
+            <span className="how-num">4</span>
+            <div>
+              <strong>Soma com a mensalidade e taxa de boleto (R$ 1,20)</strong>
+              <p>
+                Ao valor final do próximo pagamento somamos a mensalidade base (<b>{brl(m)}</b>), o proporcional arredondado (<b>{brl(c.rounded)}</b>) e a taxa fixa de geração de boleto de <b>R$ 1,20</b>.
+              </p>
+              <code>
+                {brl(m)} + {brl(c.rounded)} + R$ 1,20 = {brl(c.total)}
+              </code>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="how-steps">
+        <div className="how-step">
+          <span className="how-num">1</span>
+          <div>
+            <strong>Diferença mensal entre os planos</strong>
+            <p>
+              Subtraímos a mensalidade atual (<b>{brl(oldM)}</b>) da nova mensalidade (<b>{brl(newM)}</b>). O proporcional incide apenas sobre essa diferença.
+            </p>
+            <code>
+              {brl(newM)} − {brl(oldM)} = {brl(c.difference)} de diferença
+            </code>
+          </div>
+        </div>
+
+        <div className="how-step">
+          <span className="how-num">2</span>
+          <div>
+            <strong>Valor diário da diferença (÷ 30)</strong>
+            <p>
+              Dividimos a diferença mensal de <b>{brl(c.difference)}</b> por <b>30 dias</b> para achar o valor proporcional por dia.
+            </p>
+            <code>
+              {brl(c.difference)} ÷ 30 = {brl(c.daily)} por dia
+            </code>
+          </div>
+        </div>
+
+        <div className="how-step">
+          <span className="how-num">3</span>
+          <div>
+            <strong>Dias até o próximo vencimento e arredondamento</strong>
+            <p>
+              Contamos os dias entre a data inicial considerada (<b>{dateBR(c.start)}</b>{!equipmentDate ? " — hoje, pois o campo opcional está vazio" : ""}) e o próximo vencimento (<b>{dateBR(upgradeDue)}</b>), multiplicamos pelo valor diário e arredondamos para o múltiplo de <b>R$ 5,00</b> mais próximo.
+            </p>
+            <code>
+              {c.days} dias × {brl(c.daily)} = {brl(c.raw)} → Arredondado: {brl(c.rounded)}
+            </code>
+          </div>
+        </div>
+
+        <div className="how-step">
+          <span className="how-num">4</span>
+          <div>
+            <strong>Total da próxima cobrança</strong>
+            <p>
+              Na próxima fatura, o cliente paga a nova mensalidade (<b>{brl(newM)}</b>) mais o proporcional único da mudança de plano (<b>{brl(c.rounded)}</b>).
+            </p>
+            <code>
+              {brl(newM)} + {brl(c.rounded)} = {brl(c.total)}
+            </code>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -345,7 +529,7 @@ export default function App() {
           </div>
           <div className="brand-text">
             <span className="brand-pill">PORTAL SAC</span>
-            <small> Proporcionais </small>
+            <small>Atendimento &amp; Cobrança</small>
           </div>
         </div>
 
@@ -385,7 +569,7 @@ export default function App() {
 
           <div className="side-foot">
             <strong>Vital Net Telecom</strong>
-            <span>Uso interno · Criado por Giliel</span>
+            <span>Uso interno · Equipe SAC v2.0</span>
           </div>
         </div>
       </aside>
@@ -398,6 +582,18 @@ export default function App() {
             <p>Simule valores com precisão, confira a memória de cálculo e copie a resposta pronta para o cliente.</p>
           </div>
           <div className="top-status">
+            <button
+              type="button"
+              className="how-btn"
+              onClick={() => setShowHowItWorks(true)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span>Como funciona o cálculo</span>
+            </button>
             <div className="status-pill">
               <span className="status-dot" />
               <span>Cálculo instantâneo</span>
@@ -413,10 +609,24 @@ export default function App() {
               <h2>{activeModeObj.label}</h2>
               <p>{activeModeObj.short}.</p>
             </div>
-            <span className="mode-chip">
-              <span className="chip-icon">{activeModeObj.icon}</span>
-              {activeModeObj.badge}
-            </span>
+            <div className="welcome-actions">
+              <button
+                type="button"
+                className="how-btn how-btn-compact"
+                onClick={() => setShowHowItWorks(true)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span>Como funciona o cálculo</span>
+              </button>
+              <span className="mode-chip">
+                <span className="chip-icon">{activeModeObj.icon}</span>
+                {activeModeObj.badge}
+              </span>
+            </div>
           </div>
 
           <div className="workspace">
@@ -664,6 +874,46 @@ export default function App() {
           </footer>
         </div>
       </main>
+
+      {showHowItWorks && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="how-modal-title"
+          onClick={() => setShowHowItWorks(false)}
+        >
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <span className="modal-kicker">DETALHAMENTO · {activeModeObj.label.toUpperCase()}</span>
+                <h3 id="how-modal-title">Como funciona o cálculo</h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close"
+                aria-label="Fechar janela"
+                onClick={() => setShowHowItWorks(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">{renderHowItWorksSteps()}</div>
+
+            <div className="modal-footer">
+              <span>Valores baseados na simulação atual</span>
+              <button
+                type="button"
+                className="modal-done-btn"
+                onClick={() => setShowHowItWorks(false)}
+              >
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="toast" onClick={() => setToast("")}>
