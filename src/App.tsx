@@ -1019,7 +1019,7 @@ export default function App() {
           )}
 
           <footer className="footer">
-            <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio ao SAC <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
+            <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
           </footer>
         </div>
       </main>
