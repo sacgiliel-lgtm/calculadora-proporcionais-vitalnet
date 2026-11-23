@@ -500,7 +500,7 @@ export default function App() {
             <div>
               <strong>Dias da reativação até o próximo vencimento (inclusivo)</strong>
               <p>
-                Contamos os dias da data da reativação (<b>{dateBR(reactivation)}</b>) até o próximo vencimento (<b>{dateBR(nextDue)}</b>) e multiplicamos pelo valor diário.
+                Contamos da data da reativação (<b>{dateBR(reactivation)}</b>) até o próximo vencimento (<b>{dateBR(nextDue)}</b>) incluindo ambos os dias (<code>+ 1</code>) e multiplicamos pelo valor diário.
               </p>
               <code>
                 {c.futureDays} dias × {brl(c.daily)} = {brl(c.future)}
@@ -781,7 +781,7 @@ export default function App() {
               <div className="form-actions">
                 <div className="realtime-hint">
                   <span className="realtime-dot" />
-                  <span>Cálculo em tempo real ao digitar</span>
+                  <span>Cálculo automático em tempo real ao digitar</span>
                 </div>
                 <div className="secondary-actions">
                   <button type="button" className="text-btn clear-btn" onClick={clearFields}>
@@ -960,7 +960,7 @@ export default function App() {
             </div>
             <textarea className="message-box" value={message} readOnly />
             <div className="message-footer">
-              <span>Revise os valores e datas antes de encaminhar ao assinante.</span>
+              <span>Texto pronto para envio ao cliente — revise os valores e datas antes de encaminhar.</span>
               <span className="wa-badge">● Formatação otimizada para WhatsApp</span>
             </div>
           </section>
@@ -1007,7 +1007,12 @@ export default function App() {
           )}
 
           <footer className="footer">
-            <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
+            <div>
+              <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
+            </div>
+            <p className="confidential-note">
+              <strong>Aviso sobre o sistema:</strong> Este sistema é de uso exclusivamente interno. Seu conteúdo, telas e regras não devem ser divulgados, compartilhados ou encaminhados a pessoas externas à empresa (a mensagem gerada no Passo 03 destina-se ao envio ao cliente).
+            </p>
           </footer>
         </div>
       </main>
