@@ -500,7 +500,7 @@ export default function App() {
             <div>
               <strong>Dias da reativação até o próximo vencimento (inclusivo)</strong>
               <p>
-                Contamos da data da reativação (<b>{dateBR(reactivation)}</b>) até o próximo vencimento (<b>{dateBR(nextDue)}</b>) incluindo ambos os dias (<code>+ 1</code>) e multiplicamos pelo valor diário.
+                Contamos da data da reativação (<b>{dateBR(reactivation)}</b>) até o próximo vencimento (<b>{dateBR(nextDue)}</b>) incluindo ambos os dias e multiplicamos pelo valor diário.
               </p>
               <code>
                 {c.futureDays} dias × {brl(c.daily)} = {brl(c.future)}
