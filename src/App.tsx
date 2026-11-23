@@ -781,7 +781,7 @@ export default function App() {
               <div className="form-actions">
                 <div className="realtime-hint">
                   <span className="realtime-dot" />
-                  <span>Cálculo automático em tempo real ao digitar</span>
+                  <span>Cálculo em tempo real ao digitar</span>
                 </div>
                 <div className="secondary-actions">
                   <button type="button" className="text-btn clear-btn" onClick={clearFields}>
