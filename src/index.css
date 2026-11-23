@@ -375,6 +375,38 @@ button {
   gap: 12px;
 }
 
+.how-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--vn-cyan-soft);
+  border: 1px solid #bde6f4;
+  color: var(--vn-cyan-deep);
+  border-radius: 99px;
+  padding: 7px 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 0.16s ease;
+}
+
+.how-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.how-btn:hover {
+  background: #d3eef8;
+  border-color: var(--vn-cyan);
+  color: var(--vn-navy);
+}
+
+.how-btn-compact {
+  display: none;
+}
+
 .status-pill {
   display: flex;
   align-items: center;
@@ -386,6 +418,7 @@ button {
   border-radius: 99px;
   font-size: 11px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-dot,
@@ -411,6 +444,7 @@ button {
   font-weight: 800;
   letter-spacing: 0.5px;
   box-shadow: 0 4px 12px rgba(37, 94, 188, 0.25);
+  flex-shrink: 0;
 }
 
 /* ==================== CONTENT & WORKSPACE ==================== */
@@ -445,6 +479,13 @@ button {
   margin: 0;
   color: var(--text-secondary);
   font-size: 13px;
+}
+
+.welcome-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .mode-chip {
@@ -1112,6 +1153,181 @@ button {
   font-weight: 700;
 }
 
+/* ==================== CENTERED MODAL (COMO FUNCIONA) ==================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 26, 56, 0.58);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 60;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 580px;
+  max-height: 86vh;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px -12px rgba(9, 26, 56, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.modal-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--vn-gradient);
+}
+
+.modal-header {
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-kicker {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  color: var(--vn-cyan-deep);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.modal-header h3 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--vn-navy);
+}
+
+.modal-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.modal-close:hover {
+  background: #ffe3e3;
+  border-color: #ffa8a8;
+  color: #c92a2a;
+}
+
+.modal-body {
+  padding: 20px 22px;
+  overflow-y: auto;
+}
+
+.how-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.how-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 14px;
+}
+
+.how-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--vn-gradient);
+  color: #ffffff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.how-step strong {
+  display: block;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--vn-navy);
+  margin-bottom: 4px;
+}
+
+.how-step p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.how-step code {
+  display: inline-block;
+  background: #eaf1fc;
+  color: var(--vn-blue);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 7px;
+}
+
+.modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-footer span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.modal-done-btn {
+  border: 0;
+  background: linear-gradient(135deg, var(--vn-blue-bright) 0%, var(--vn-blue) 100%);
+  color: #ffffff;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: var(--shadow-blue);
+}
+
 /* ==================== TOAST ==================== */
 .toast {
   position: fixed;
@@ -1225,8 +1441,12 @@ button {
   .topbar h1 {
     font-size: 18px;
   }
+  .top-status .how-btn,
   .status-pill {
     display: none;
+  }
+  .how-btn-compact {
+    display: inline-flex;
   }
   .content {
     padding: 18px 14px 24px;
