@@ -649,7 +649,7 @@ export default function App() {
           </div>
           <div className="brand-text">
             <span className="brand-pill">PORTAL SAC</span>
-            <small>Atendimento &amp; Cobrança</small>
+            <small>Proporcionais</small>
           </div>
         </div>
 
