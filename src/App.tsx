@@ -886,8 +886,8 @@ export default function App() {
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <span className="modal-kicker">DETALHAMENTO · {activeModeObj.label.toUpperCase()}</span>
-                <h3 id="how-modal-title">Como funciona o cálculo</h3>
+                <span className="modal-kicker">DETALHAMENTO · {activeModeObj.badge}</span>
+                <h3 id="how-modal-title">Como funciona o cálculo — {activeModeObj.label}</h3>
               </div>
               <button
                 type="button"
