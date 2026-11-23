@@ -15,7 +15,7 @@ const modes: {id:Mode;label:string;short:string;icon:string}[] = [
   {id:"vencimento",label:"Troca de vencimento",short:"Ajuste entre duas datas de cobrança",icon:"▦"},
   {id:"upgrade",label:"Upgrade",short:"Diferença proporcional entre planos",icon:"↗"}
 ];
-function Field({label,value,onChange,type="text",hint,placeholder}:{label:string;value:string;onChange:(v:string)=>void;type?:string;hint?:string;placeholder?:string}) {
+function Field({label,value,onChange,type="text",hint,placeholder}:{label:string;value:string;onChange:(v:string)=>void;type?:"text"|"date";hint?:string;placeholder?:string}) {
   return <label className="field"><span>{label}</span><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>{hint&&<small>{hint}</small>}</label>;
 }
 function ResultLine({label,value,muted=false}:{label:string;value:string;muted?:boolean}) {
