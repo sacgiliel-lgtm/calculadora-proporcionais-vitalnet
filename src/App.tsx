@@ -432,13 +432,13 @@ export default function App() {
           <div className="extra-days-box">
             <div className="extra-days-head">
               <div>
-                <strong>Dias adicionais manuais</strong>
+                <strong>Dias adicionais manuais (opcional)</strong>
                 <p>
-                  Digite a quantidade de dias a mais para somar ao cálculo — ideal para casos de <b>desbloqueios</b> (ex.: dia de bloqueio/desbloqueio) ou outros ajustes extras de uso.
+                  Opcional: digite a quantidade de dias a mais para somar ao cálculo — ideal para casos de <b>desbloqueios</b> (ex.: dia de bloqueio/desbloqueio) ou outros ajustes extras de uso.
                 </p>
               </div>
               <label className="extra-days-field">
-                <span>Quantidade de dias a mais</span>
+                <span>Quantidade de dias a mais (opcional)</span>
                 <div className="extra-days-input-wrap">
                   <input
                     type="number"
