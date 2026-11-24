@@ -414,7 +414,7 @@ export default function App() {
               isSample={monthly === DEFAULTS.monthly}
             />
             <Field
-              label="Vencimento do boleto considerado"
+              label="1º vencimento em atraso"
               value={due}
               onChange={setDue}
               type="date"
