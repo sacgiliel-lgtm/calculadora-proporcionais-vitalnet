@@ -85,6 +85,7 @@ function Field({
   required = true,
   isSample = false,
   warning,
+  tooltip,
 }: {
   label: string;
   value: string;
@@ -96,6 +97,7 @@ function Field({
   required?: boolean;
   isSample?: boolean;
   warning?: string;
+  tooltip?: string;
 }) {
   const isEmpty = required && value.trim() === "";
   const hasWarning = !isEmpty && !!warning;
@@ -104,7 +106,23 @@ function Field({
       className={`field ${isEmpty ? "is-empty" : ""} ${hasWarning ? "has-warning" : ""} ${!isEmpty && !hasWarning && isSample ? "is-sample" : ""}`}
     >
       <div className="field-label-row">
-        <span>{label}</span>
+        <span className="field-label-text">
+          <span>{label}</span>
+          {tooltip && (
+            <span
+              className="field-tooltip-trigger"
+              tabIndex={0}
+              role="img"
+              aria-label={tooltip}
+              title={tooltip}
+            >
+              ?
+              <span className="field-tooltip-bubble" role="tooltip">
+                {tooltip}
+              </span>
+            </span>
+          )}
+        </span>
         {isEmpty ? (
           <span className="empty-badge">Campo vazio</span>
         ) : hasWarning ? (
@@ -397,11 +415,12 @@ export default function App() {
               isSample={monthly === DEFAULTS.monthly}
             />
             <Field
-              label="1º boleto vencido considerado"
+              label="Vencimento do boleto considerado"
               value={due}
               onChange={setDue}
               type="date"
               isSample={due === DEFAULTS.due}
+              tooltip="Data de vencimento do primeiro boleto em atraso que ocasionou o bloqueio do contrato."
             />
           </div>
           <div className="field-grid">
@@ -432,9 +451,9 @@ export default function App() {
           <div className="extra-days-box">
             <div className="extra-days-head">
               <div>
-                <strong>Dias adicionais de uso (opcional)</strong>
+                <strong>Dias adicionais manuais (opcional)</strong>
                 <p>
-                  Opcional: digite a quantidade de dias a mais de uso para somar ao cálculo — ideal para casos de <b>desbloqueios</b> ou outros ajustes extras de uso.
+                  Opcional: digite a quantidade de dias a mais para somar ao cálculo — ideal para casos de <b>desbloqueios</b> (ex.: dia de bloqueio/desbloqueio) ou outros ajustes extras de uso.
                 </p>
               </div>
               <label className="extra-days-field">
