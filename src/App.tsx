@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Mode = "reativacao" | "vencimento" | "upgrade";
-type UnlockCount = "0" | "1" | "2" | "3";
 type Saved = { id: string; mode: Mode; title: string; total: number; date: string; details: string };
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -13,101 +12,16 @@ const dateFrom = (s: string) => {
   const [y, m, d] = s.split("-").map(Number);
   return new Date(y, m - 1, d, 12);
 };
-const toISODate = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const addDays = (s: string, days: number) => {
-  const d = dateFrom(s);
-  d.setDate(d.getDate() + days);
-  return toISODate(d);
-};
 const dayDiff = (a: string, b: string) => Math.round((dateFrom(b).getTime() - dateFrom(a).getTime()) / 86400000);
 const dateBR = (s: string) => (s ? dateFrom(s).toLocaleDateString("pt-BR") : "—");
 const moneyNumber = (s: string) => Number(s.replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, "")) || 0;
 const round5 = (n: number) => Math.round(n / 5) * 5;
 const safe = (n: number) => Number(n.toFixed(2));
 
-// Feriados nacionais fixos (MM-DD)
-const FIXED_HOLIDAYS_MMDD = new Set([
-  "01-01", // Confraternização Universal
-  "04-21", // Tiradentes
-  "05-01", // Dia do Trabalho
-  "09-07", // Independência do Brasil
-  "10-12", // Nossa Senhora Aparecida
-  "11-02", // Finados
-  "11-15", // Proclamação da República
-  "11-20", // Consciência Negra
-  "12-25", // Natal
-]);
-
-const parseCustomHolidays = (raw: string): Set<string> => {
-  const set = new Set<string>();
-  raw
-    .split(/[\s,;]+/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .forEach((item) => {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(item)) {
-        set.add(item);
-      } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(item)) {
-        const [d, m, y] = item.split("/");
-        set.add(`${y}-${m}-${d}`);
-      } else if (/^\d{2}\/\d{2}$/.test(item)) {
-        const [d, m] = item.split("/");
-        set.add(`MM-DD:${m}-${d}`);
-      }
-    });
-  return set;
-};
-
-const isNonBlockingDay = (isoDate: string, customHolidays: Set<string>): boolean => {
-  const d = dateFrom(isoDate);
-  const dow = d.getDay(); // 0 = Domingo, 6 = Sábado
-  if (dow === 0 || dow === 6) return true;
-  const mmdd = isoDate.slice(5);
-  if (FIXED_HOLIDAYS_MMDD.has(mmdd)) return true;
-  if (customHolidays.has(isoDate) || customHolidays.has(`MM-DD:${mmdd}`)) return true;
-  return false;
-};
-
-/**
- * Calcula a data efetiva de bloqueio a partir da data da solicitação do desbloqueio:
- * - O desbloqueio vale até a meia-noite do dia solicitado (a data efetiva base é o próprio dia solicitado).
- * - Se o dia seguinte (virada da meia-noite) cair em sábado, domingo ou feriado, não bloqueia
- *   e o uso se estende até o último dia não útil consecutivo antes do próximo dia útil.
- */
-const resolveEffectiveBlockDate = (
-  unlockRequestDate: string,
-  customHolidaysRaw: string
-): { effectiveDate: string; extendedDays: number; nextBusinessDay: string } => {
-  if (!unlockRequestDate) {
-    return { effectiveDate: "", extendedDays: 0, nextBusinessDay: "" };
-  }
-  const customHolidays = parseCustomHolidays(customHolidaysRaw);
-  let cursor = unlockRequestDate;
-  let extendedDays = 0;
-
-  while (true) {
-    const nextDay = addDays(cursor, 1);
-    if (isNonBlockingDay(nextDay, customHolidays)) {
-      cursor = nextDay;
-      extendedDays += 1;
-    } else {
-      return {
-        effectiveDate: cursor,
-        extendedDays,
-        nextBusinessDay: nextDay,
-      };
-    }
-  }
-};
-
 const DEFAULTS = {
   monthly: "80,00",
   due: "2026-10-29",
   blocked: "2026-11-06",
-  unlockCount: "0" as UnlockCount,
-  unlockRequestDate: "",
-  customHolidays: "",
   nextDue: "2026-11-29",
   oldDue: "2026-11-25",
   newDue: "2026-12-10",
@@ -171,7 +85,6 @@ function Field({
   required = true,
   isSample = false,
   warning,
-  readOnly = false,
 }: {
   label: string;
   value: string;
@@ -183,7 +96,6 @@ function Field({
   required?: boolean;
   isSample?: boolean;
   warning?: string;
-  readOnly?: boolean;
 }) {
   const isEmpty = required && value.trim() === "";
   const hasWarning = !isEmpty && !!warning;
@@ -209,7 +121,6 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           aria-invalid={isEmpty}
-          readOnly={readOnly}
         />
       </div>
       {isEmpty ? (
@@ -247,9 +158,6 @@ export default function App() {
   const [monthly, setMonthly] = useState(DEFAULTS.monthly);
   const [due, setDue] = useState(DEFAULTS.due);
   const [blocked, setBlocked] = useState(DEFAULTS.blocked);
-  const [unlockCount, setUnlockCount] = useState<UnlockCount>(DEFAULTS.unlockCount);
-  const [unlockRequestDate, setUnlockRequestDate] = useState(DEFAULTS.unlockRequestDate);
-  const [customHolidays, setCustomHolidays] = useState(DEFAULTS.customHolidays);
   const [reactivation, setReactivation] = useState(() => today());
   const [nextDue, setNextDue] = useState(DEFAULTS.nextDue);
   const [oldDue, setOldDue] = useState(DEFAULTS.oldDue);
@@ -309,28 +217,12 @@ export default function App() {
     oldM = moneyNumber(oldPlan),
     newM = moneyNumber(newPlan);
 
-  const hasUnlock = unlockCount !== "0";
-
-  const unlockResolution = useMemo(() => {
-    if (!hasUnlock || !unlockRequestDate) {
-      return { effectiveDate: "", extendedDays: 0, nextBusinessDay: "" };
-    }
-    return resolveEffectiveBlockDate(unlockRequestDate, customHolidays);
-  }, [hasUnlock, unlockRequestDate, customHolidays]);
-
-  const effectiveBlockedDate = useMemo(() => {
-    if (hasUnlock && unlockResolution.effectiveDate) {
-      return unlockResolution.effectiveDate;
-    }
-    return blocked;
-  }, [hasUnlock, unlockResolution.effectiveDate, blocked]);
-
   const hasSampleValues = useMemo(() => {
     if (mode === "reativacao") {
       return (
         monthly === DEFAULTS.monthly ||
         due === DEFAULTS.due ||
-        (!hasUnlock && blocked === DEFAULTS.blocked) ||
+        blocked === DEFAULTS.blocked ||
         nextDue === DEFAULTS.nextDue
       );
     }
@@ -338,30 +230,29 @@ export default function App() {
       return monthly === DEFAULTS.monthly || oldDue === DEFAULTS.oldDue || newDue === DEFAULTS.newDue;
     }
     return oldPlan === DEFAULTS.oldPlan || newPlan === DEFAULTS.newPlan || upgradeDue === DEFAULTS.upgradeDue;
-  }, [mode, monthly, due, hasUnlock, blocked, nextDue, oldDue, newDue, oldPlan, newPlan, upgradeDue]);
+  }, [mode, monthly, due, blocked, nextDue, oldDue, newDue, oldPlan, newPlan, upgradeDue]);
 
   // Avisos (não bloqueiam o cálculo): datas que contradizem o fluxo normal da reativação
   const dateWarnings = useMemo(() => {
     const w: { blocked?: string; reactivation?: string } = {};
     if (mode !== "reativacao") return w;
-    if (due && effectiveBlockedDate && dayDiff(due, effectiveBlockedDate) < 0)
+    if (due && blocked && dayDiff(due, blocked) < 0)
       w.blocked = "O bloqueio está antes do vencimento: nenhum dia de uso após o vencimento será contado.";
     if (reactivation && nextDue && dayDiff(reactivation, nextDue) < 0)
       w.reactivation = "A reativação está depois do próximo vencimento: nenhum dia futuro será contado.";
     return w;
-  }, [mode, due, effectiveBlockedDate, reactivation, nextDue]);
+  }, [mode, due, blocked, reactivation, nextDue]);
   const hasDateWarnings = Object.keys(dateWarnings).length > 0;
 
   const calc = useMemo(() => {
     if (mode === "reativacao") {
       const daily = safe(m / 30);
-      const usedDays = due && effectiveBlockedDate ? Math.max(0, dayDiff(due, effectiveBlockedDate)) : 0;
+      const usedDays = due && blocked ? Math.max(0, dayDiff(due, blocked)) : 0;
       const futureDays = reactivation && nextDue ? Math.max(0, dayDiff(reactivation, nextDue) + 1) : 0;
       const used = safe(daily * usedDays),
         future = safe(daily * futureDays),
         raw = safe(used + future),
         rounded = round5(raw);
-      const unlockValid = !hasUnlock || !!unlockRequestDate;
       return {
         daily,
         usedDays,
@@ -371,18 +262,7 @@ export default function App() {
         raw,
         rounded,
         total: rounded,
-        effectiveBlockedDate,
-        extendedDays: unlockResolution.extendedDays,
-        nextBusinessDay: unlockResolution.nextBusinessDay,
-        valid:
-          m > 0 &&
-          usedDays >= 0 &&
-          futureDays >= 0 &&
-          !!due &&
-          !!effectiveBlockedDate &&
-          !!reactivation &&
-          !!nextDue &&
-          unlockValid,
+        valid: m > 0 && usedDays >= 0 && futureDays >= 0 && !!due && !!blocked && !!reactivation && !!nextDue,
       };
     }
     if (mode === "vencimento") {
@@ -402,39 +282,14 @@ export default function App() {
       rounded = round5(raw),
       total = safe(newM + rounded);
     return { difference, daily, days, start, raw, rounded, total, valid: oldM >= 0 && newM > oldM && !!upgradeDue && days > 0 };
-  }, [
-    mode,
-    m,
-    due,
-    effectiveBlockedDate,
-    reactivation,
-    nextDue,
-    hasUnlock,
-    unlockRequestDate,
-    unlockResolution.extendedDays,
-    unlockResolution.nextBusinessDay,
-    oldDue,
-    newDue,
-    oldM,
-    newM,
-    equipmentDate,
-    upgradeDue,
-  ]);
+  }, [mode, m, due, blocked, reactivation, nextDue, oldDue, newDue, oldM, newM, equipmentDate, upgradeDue]);
 
   const message = useMemo(() => {
     // Sem dados válidos não existe mensagem: evita copiar um texto com "R$ 0,00" e datas "—"
     if (!(calc as any).valid) return "";
     if (mode === "reativacao") {
       const c = calc as any;
-      const unlockNote =
-        hasUnlock && unlockRequestDate
-          ? ` (considerando o ${unlockCount}º desbloqueio solicitado em ${dateBR(unlockRequestDate)}${
-              c.extendedDays > 0
-                ? `, estendido até ${dateBR(c.effectiveBlockedDate)} por fim de semana/feriado`
-                : ""
-            })`
-          : "";
-      return `Verifiquei que sua mensalidade é no valor de ${brl(m)}.\n\nPara regularizar e reativar a conexão, precisamos considerar os dias em que o serviço foi utilizado após o vencimento do primeiro boleto.\n\nA sua conexão continuou funcionando até o dia ${dateBR(c.effectiveBlockedDate)}${unlockNote}, ou seja, foram ${c.usedDays} dias de uso após o vencimento de ${dateBR(due)}.\nTambém estamos considerando a ativação da conexão de ${dateBR(reactivation)} até o próximo vencimento, que será em ${dateBR(nextDue)}, totalizando ${c.futureDays} dias de uso.\n\nFizemos o cálculo proporcional da seguinte forma:\n\n📌 ${brl(m)} / 30 dias = ${brl(c.daily)} por dia de uso\n\n${c.usedDays} dias usados após o vencimento de ${dateBR(due)}\n→ ${c.usedDays} x ${brl(c.daily)} = ${brl(c.used)}\n\n${c.futureDays} dias de hoje até o próximo vencimento (${dateBR(nextDue)})\n→ ${c.futureDays} x ${brl(c.daily)} = ${brl(c.future)}\n\n✅ Valor total calculado: ${brl(c.used)} + ${brl(c.future)} = ${brl(c.raw)}\n\nPorém, iremos arredondar o valor para ${brl(c.rounded)}.\n\nEsse valor cobre o período em que o serviço foi utilizado e o período que será utilizado até o próximo vencimento.`;
+      return `Verifiquei que sua mensalidade é no valor de ${brl(m)}.\n\nPara regularizar e reativar a conexão, precisamos considerar os dias em que o serviço foi utilizado após o vencimento do primeiro boleto.\n\nA sua conexão continuou funcionando até o dia ${dateBR(blocked)}, ou seja, foram ${c.usedDays} dias de uso após o vencimento de ${dateBR(due)}.\nTambém estamos considerando a ativação da conexão de ${dateBR(reactivation)} até o próximo vencimento, que será em ${dateBR(nextDue)}, totalizando ${c.futureDays} dias de uso.\n\nFizemos o cálculo proporcional da seguinte forma:\n\n📌 ${brl(m)} / 30 dias = ${brl(c.daily)} por dia de uso\n\n${c.usedDays} dias usados após o vencimento de ${dateBR(due)}\n→ ${c.usedDays} x ${brl(c.daily)} = ${brl(c.used)}\n\n${c.futureDays} dias de hoje até o próximo vencimento (${dateBR(nextDue)})\n→ ${c.futureDays} x ${brl(c.daily)} = ${brl(c.future)}\n\n✅ Valor total calculado: ${brl(c.used)} + ${brl(c.future)} = ${brl(c.raw)}\n\nPorém, iremos arredondar o valor para ${brl(c.rounded)}.\n\nEsse valor cobre o período em que o serviço foi utilizado e o período que será utilizado até o próximo vencimento.`;
     }
     if (mode === "vencimento") {
       const c = calc as any;
@@ -442,7 +297,7 @@ export default function App() {
     }
     const c = calc as any;
     return `Gostaríamos de informar que, ao aceitar o upgrade, a vigência contratual será renovada por mais um ano. Dessa forma, o contrato não poderá ser rescindido antes deste prazo, pois estará sujeito a multa rescisória.\n\nComo o seu plano é pré-pago, ao realizar uma mudança de plano, é necessário calcular um valor proporcional referente aos dias restantes do plano anterior até o início do novo plano.\n\nNesse caso, será feita a mudança e o valor proporcional será de ${brl(c.rounded)}, que será cobrado junto com o valor do novo plano no próximo vencimento, no dia ${dateBR(upgradeDue)}.\n\nOu seja, neste pagamento você irá pagar:\n\n${brl(newM)} referente ao novo plano mensal\n${brl(c.rounded)} referente ao proporcional da mudança de plano\n\nTotal da próxima cobrança: ${brl(c.total)}.\n\n*Importante:* essa cobrança proporcional acontece somente uma vez, por conta da troca de plano. A partir do mês seguinte, você pagará apenas o valor fixo da nova mensalidade, sem adicionais.\n\nSe estiver de acordo, forneça uma foto do documento de identidade com foto e assinatura do titular (CNH aberta ou RG frente e verso, juntamente com o CPF) para poder fazer o link de assinatura que estarei te enviando junto com o passo a passo de como assinar. Assim que tiver assinado, eu já vejo um horário disponível na agenda e confirmo com você.`;
-  }, [mode, calc, m, due, hasUnlock, unlockCount, unlockRequestDate, reactivation, nextDue, oldDue, newDue, newM, upgradeDue]);
+  }, [mode, calc, m, due, blocked, reactivation, nextDue, oldDue, newDue, newM, upgradeDue]);
 
   const save = () => {
     if (!(calc as any).valid) {
@@ -458,9 +313,7 @@ export default function App() {
       date: today(),
       details:
         mode === "reativacao"
-          ? `${c.usedDays} + ${c.futureDays} dias${
-              hasUnlock ? ` (${unlockCount}º desbl.)` : ""
-            } · proporcional ${brl(c.raw)} → ${brl(c.rounded)}`
+          ? `${c.usedDays} + ${c.futureDays} dias · proporcional ${brl(c.raw)} → ${brl(c.rounded)}`
           : mode === "vencimento"
             ? `${c.days} dias · proporcional ${brl(c.rounded)} + taxa R$ 1,20`
             : `${c.days} dias · proporcional ${brl(c.rounded)}`,
@@ -489,9 +342,6 @@ export default function App() {
       setMonthly("");
       setDue("");
       setBlocked("");
-      setUnlockCount("0");
-      setUnlockRequestDate("");
-      setCustomHolidays("");
       setReactivation(today()); // a reativação normalmente é hoje: já vem preenchida, sem marcar como exemplo
       setNextDue("");
     } else if (mode === "vencimento") {
@@ -511,9 +361,6 @@ export default function App() {
     setMonthly(DEFAULTS.monthly);
     setDue(DEFAULTS.due);
     setBlocked(DEFAULTS.blocked);
-    setUnlockCount(DEFAULTS.unlockCount);
-    setUnlockRequestDate(DEFAULTS.unlockRequestDate);
-    setCustomHolidays(DEFAULTS.customHolidays);
     setReactivation(today());
     setNextDue(DEFAULTS.nextDue);
     setOldDue(DEFAULTS.oldDue);
@@ -527,13 +374,6 @@ export default function App() {
 
   const inputFields = () => {
     if (mode === "reativacao") {
-      const unlockOptions: { value: UnlockCount; label: string; sub: string }[] = [
-        { value: "0", label: "Sem desbloqueio", sub: "Bloqueio direto" },
-        { value: "1", label: "1º desbloqueio", sub: "1 de 3 usados" },
-        { value: "2", label: "2º desbloqueio", sub: "2 de 3 usados" },
-        { value: "3", label: "3º desbloqueio", sub: "Limite (3 de 3)" },
-      ];
-
       return (
         <>
           <div className="field-grid">
@@ -553,98 +393,16 @@ export default function App() {
               isSample={due === DEFAULTS.due}
             />
           </div>
-
-          <div className="unlock-box">
-            <div className="unlock-box-header">
-              <div>
-                <strong>Desbloqueio em confiança após o bloqueio</strong>
-                <p>
-                  Cada cliente tem direito a até 3 desbloqueios, válidos até a meia-noite do dia solicitado (sem bloqueio em fins de semana e feriados).
-                </p>
-              </div>
-              <span className="unlock-limit-tag">Máx. 3 desbloqueios</span>
-            </div>
-
-            <div className="unlock-pills" role="group" aria-label="Quantidade de desbloqueios utilizados">
-              {unlockOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={`unlock-pill ${unlockCount === opt.value ? "active" : ""}`}
-                  onClick={() => setUnlockCount(opt.value)}
-                >
-                  <strong>{opt.label}</strong>
-                  <small>{opt.sub}</small>
-                </button>
-              ))}
-            </div>
-
-            {hasUnlock && (
-              <div className="unlock-fields">
-                <div className="field-grid">
-                  <Field
-                    label={`Data da solicitação (${unlockCount}º desbloqueio)`}
-                    value={unlockRequestDate}
-                    onChange={setUnlockRequestDate}
-                    type="date"
-                    hint="A data efetiva do bloqueio considera o dia da solicitação (válido até a meia-noite)."
-                  />
-                  <Field
-                    label="Feriados locais/móveis (opcional)"
-                    value={customHolidays}
-                    onChange={setCustomHolidays}
-                    type="text"
-                    required={false}
-                    placeholder="Ex.: 20/11 ou 25/12/2026"
-                    hint="Feriados nacionais fixos já são considerados. Separe datas extras por vírgula."
-                  />
-                </div>
-
-                {unlockRequestDate && (
-                  <div className="unlock-summary">
-                    <span>
-                      📅 Data efetiva apurada: <strong>{dateBR(unlockResolution.effectiveDate)}</strong>
-                      {unlockResolution.extendedDays > 0 ? (
-                        <>
-                          {" "}
-                          (estendida em <strong>+{unlockResolution.extendedDays} dia(s)</strong> por fim de semana/feriado; bloqueio na virada para{" "}
-                          <strong>{dateBR(unlockResolution.nextBusinessDay)}</strong>)
-                        </>
-                      ) : (
-                        <>
-                          {" "}
-                          (bloqueio na virada da meia-noite para <strong>{dateBR(unlockResolution.nextBusinessDay)}</strong>)
-                        </>
-                      )}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           <div className="field-grid">
-            {hasUnlock ? (
-              <Field
-                label="Data efetiva do bloqueio (calculada)"
-                value={effectiveBlockedDate}
-                onChange={() => {}}
-                type="date"
-                readOnly
-                warning={dateWarnings.blocked}
-                hint="Calculada automaticamente pela data da solicitação + regra de fins de semana/feriados."
-              />
-            ) : (
-              <Field
-                label="Data efetiva do bloqueio"
-                value={blocked}
-                onChange={setBlocked}
-                type="date"
-                isSample={blocked === DEFAULTS.blocked}
-                warning={dateWarnings.blocked}
-                hint="Data em que o sistema bloqueou a conexão (considerando feriados/finais de semana)."
-              />
-            )}
+            <Field
+              label="Data efetiva do bloqueio"
+              value={blocked}
+              onChange={setBlocked}
+              type="date"
+              isSample={blocked === DEFAULTS.blocked}
+              warning={dateWarnings.blocked}
+              hint="Data em que o sistema bloqueou a conexão (considerando feriados/finais de semana)."
+            />
             <Field
               label="Data da reativação"
               value={reactivation}
@@ -663,7 +421,7 @@ export default function App() {
           <div className="notice">
             <span className="notice-icon">ℹ</span>
             <div>
-              A contagem futura inclui o dia da reativação e o próximo vencimento. O período em atraso conta a partir do dia seguinte ao vencimento até a data efetiva do bloqueio.
+              A contagem futura inclui o dia da reativação e o próximo vencimento. O período em atraso conta a partir do dia seguinte ao vencimento até o bloqueio.
             </div>
           </div>
         </>
@@ -775,24 +533,9 @@ export default function App() {
           <div className="how-step">
             <span className="how-num">2</span>
             <div>
-              <strong>Regra dos desbloqueios (até 3) e data efetiva do bloqueio</strong>
-              <p>
-                Cada cliente tem direito a até <b>3 desbloqueios</b> após o bloqueio, válidos até a meia-noite do dia solicitado. Quando o dia seguinte cai em <b>sábado, domingo ou feriado</b>, o bloqueio não ocorre e o uso se estende até o próximo dia útil.
-              </p>
-              <code>
-                {hasUnlock && unlockRequestDate
-                  ? `${unlockCount}º desbloqueio em ${dateBR(unlockRequestDate)} → Data efetiva: ${dateBR(c.effectiveBlockedDate)}`
-                  : `Data efetiva considerada: ${dateBR(c.effectiveBlockedDate)}`}
-              </code>
-            </div>
-          </div>
-
-          <div className="how-step">
-            <span className="how-num">2b</span>
-            <div>
               <strong>Dias utilizados após o vencimento até o bloqueio</strong>
               <p>
-                Calculamos a diferença de dias entre o vencimento considerado (<b>{dateBR(due)}</b>) e a data efetiva do bloqueio (<b>{dateBR(c.effectiveBlockedDate)}</b>) e multiplicamos pelo valor diário.
+                Calculamos a diferença de dias entre o vencimento considerado (<b>{dateBR(due)}</b>) e a data efetiva do bloqueio (<b>{dateBR(blocked)}</b>) e multiplicamos pelo valor diário.
               </p>
               <code>
                 {c.usedDays} dias × {brl(c.daily)} = {brl(c.used)}
@@ -1147,20 +890,6 @@ export default function App() {
                         </strong>
                       </div>
                     </div>
-                    {hasUnlock && (
-                      <ResultLine
-                        label={`Desbloqueio utilizado (${unlockCount} de 3)`}
-                        value={
-                          unlockRequestDate
-                            ? `Solicitado em ${dateBR(unlockRequestDate)}${
-                                c.extendedDays > 0 ? ` (+${c.extendedDays}d fim sem./feriado)` : ""
-                              }`
-                            : "Informe a data"
-                        }
-                        highlight
-                      />
-                    )}
-                    <ResultLine label="Data efetiva do bloqueio" value={dateBR(c.effectiveBlockedDate)} />
                     <ResultLine label={`${c.usedDays} dias usados após o vencimento`} value={brl(c.used)} />
                     <ResultLine label={`${c.futureDays} dias até o próximo vencimento`} value={brl(c.future)} />
                     <ResultLine label="Subtotal antes do arredondamento" value={brl(c.raw)} muted />
