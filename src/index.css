@@ -1804,3 +1804,19 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .drawer, .drawer-overlay { animation: none; }
 }
+
+/* ==================== MENSAGEM INDISPONÍVEL (dados incompletos) ==================== */
+.copy-btn:disabled {
+  background: #e8edf4;
+  color: #8a9ab2;
+  border-color: #d5dfec;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+.message-box::placeholder {
+  color: #8a9ab2;
+  font-style: italic;
+}
