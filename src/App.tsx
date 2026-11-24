@@ -114,7 +114,6 @@ function Field({
               tabIndex={0}
               role="img"
               aria-label={tooltip}
-              title={tooltip}
             >
               ?
               <span className="field-tooltip-bubble" role="tooltip">
