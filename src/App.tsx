@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Mode = "reativacao" | "vencimento" | "upgrade";
 type Saved = { id: string; mode: Mode; title: string; total: number; date: string; details: string };
@@ -84,6 +84,7 @@ function Field({
   prefix,
   required = true,
   isSample = false,
+  warning,
 }: {
   label: string;
   value: string;
@@ -94,19 +95,25 @@ function Field({
   prefix?: string;
   required?: boolean;
   isSample?: boolean;
+  warning?: string;
 }) {
   const isEmpty = required && value.trim() === "";
+  const hasWarning = !isEmpty && !!warning;
   return (
-    <label className={`field ${isEmpty ? "is-empty" : ""} ${!isEmpty && isSample ? "is-sample" : ""}`}>
+    <label
+      className={`field ${isEmpty ? "is-empty" : ""} ${hasWarning ? "has-warning" : ""} ${!isEmpty && !hasWarning && isSample ? "is-sample" : ""}`}
+    >
       <div className="field-label-row">
         <span>{label}</span>
         {isEmpty ? (
           <span className="empty-badge">Campo vazio</span>
+        ) : hasWarning ? (
+          <span className="warn-badge">Confira</span>
         ) : (
           isSample && <span className="sample-badge">Exemplo</span>
         )}
       </div>
-      <div className={`input-wrap ${prefix ? "has-prefix" : ""} ${isEmpty ? "invalid" : ""}`}>
+      <div className={`input-wrap ${prefix ? "has-prefix" : ""} ${isEmpty ? "invalid" : ""} ${hasWarning ? "warn" : ""}`}>
         {prefix && <span className="input-prefix">{prefix}</span>}
         <input
           type={type}
@@ -118,6 +125,8 @@ function Field({
       </div>
       {isEmpty ? (
         <small className="error-text">Preencha este campo para calcular corretamente.</small>
+      ) : hasWarning ? (
+        <small className="warn-text">{warning}</small>
       ) : (
         hint && <small>{hint}</small>
       )}
@@ -145,12 +154,11 @@ function ResultLine({
 }
 
 export default function App() {
-  const [defaultReactivation] = useState(() => today());
   const [mode, setMode] = useState<Mode>("reativacao");
   const [monthly, setMonthly] = useState(DEFAULTS.monthly);
   const [due, setDue] = useState(DEFAULTS.due);
   const [blocked, setBlocked] = useState(DEFAULTS.blocked);
-  const [reactivation, setReactivation] = useState(defaultReactivation);
+  const [reactivation, setReactivation] = useState(() => today());
   const [nextDue, setNextDue] = useState(DEFAULTS.nextDue);
   const [oldDue, setOldDue] = useState(DEFAULTS.oldDue);
   const [newDue, setNewDue] = useState(DEFAULTS.newDue);
@@ -159,29 +167,51 @@ export default function App() {
   const [equipmentDate, setEquipmentDate] = useState("");
   const [upgradeDue, setUpgradeDue] = useState(DEFAULTS.upgradeDue);
   const [copied, setCopied] = useState(false);
-  const [history, setHistory] = useState<Saved[]>([]);
+  const [history, setHistory] = useState<Saved[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("vitalnet-proportional-history") || "[]");
+      return Array.isArray(saved) ? saved : [];
+    } catch {
+      return [];
+    }
+  });
   const [showHistory, setShowHistory] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [toast, setToast] = useState("");
 
   useEffect(() => {
     try {
-      setHistory(JSON.parse(localStorage.getItem("vitalnet-proportional-history") || "[]"));
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("vitalnet-proportional-history", JSON.stringify(history));
+      localStorage.setItem("vitalnet-proportional-history", JSON.stringify(history));
+    } catch {
+      /* armazenamento indisponível (ex.: aba privada): segue sem persistir */
+    }
   }, [history]);
 
   useEffect(() => {
-    if (!showHowItWorks) return;
+    if (!showHowItWorks && !showHistory) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowHowItWorks(false);
+      if (e.key !== "Escape") return;
+      setShowHowItWorks(false);
+      setShowHistory(false);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showHowItWorks]);
+  }, [showHowItWorks, showHistory]);
+
+  // Ao abrir a gaveta do histórico, leva o foco para o botão de fechar e dispensa avisos pendentes
+  const drawerCloseRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!showHistory) return;
+    drawerCloseRef.current?.focus();
+    setToast("");
+  }, [showHistory]);
+
+  // Avisos somem sozinhos após alguns segundos
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 4500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const m = moneyNumber(monthly),
     oldM = moneyNumber(oldPlan),
@@ -193,7 +223,6 @@ export default function App() {
         monthly === DEFAULTS.monthly ||
         due === DEFAULTS.due ||
         blocked === DEFAULTS.blocked ||
-        reactivation === defaultReactivation ||
         nextDue === DEFAULTS.nextDue
       );
     }
@@ -201,7 +230,19 @@ export default function App() {
       return monthly === DEFAULTS.monthly || oldDue === DEFAULTS.oldDue || newDue === DEFAULTS.newDue;
     }
     return oldPlan === DEFAULTS.oldPlan || newPlan === DEFAULTS.newPlan || upgradeDue === DEFAULTS.upgradeDue;
-  }, [mode, monthly, due, blocked, reactivation, defaultReactivation, nextDue, oldDue, newDue, oldPlan, newPlan, upgradeDue]);
+  }, [mode, monthly, due, blocked, nextDue, oldDue, newDue, oldPlan, newPlan, upgradeDue]);
+
+  // Avisos (não bloqueiam o cálculo): datas que contradizem o fluxo normal da reativação
+  const dateWarnings = useMemo(() => {
+    const w: { blocked?: string; reactivation?: string } = {};
+    if (mode !== "reativacao") return w;
+    if (due && blocked && dayDiff(due, blocked) < 0)
+      w.blocked = "O bloqueio está antes do vencimento: nenhum dia de uso após o vencimento será contado.";
+    if (reactivation && nextDue && dayDiff(reactivation, nextDue) < 0)
+      w.reactivation = "A reativação está depois do próximo vencimento: nenhum dia futuro será contado.";
+    return w;
+  }, [mode, due, blocked, reactivation, nextDue]);
+  const hasDateWarnings = Object.keys(dateWarnings).length > 0;
 
   const calc = useMemo(() => {
     if (mode === "reativacao") {
@@ -295,7 +336,7 @@ export default function App() {
       setMonthly("");
       setDue("");
       setBlocked("");
-      setReactivation("");
+      setReactivation(today()); // a reativação normalmente é hoje: já vem preenchida, sem marcar como exemplo
       setNextDue("");
     } else if (mode === "vencimento") {
       setMonthly("");
@@ -314,7 +355,7 @@ export default function App() {
     setMonthly(DEFAULTS.monthly);
     setDue(DEFAULTS.due);
     setBlocked(DEFAULTS.blocked);
-    setReactivation(defaultReactivation);
+    setReactivation(today());
     setNextDue(DEFAULTS.nextDue);
     setOldDue(DEFAULTS.oldDue);
     setNewDue(DEFAULTS.newDue);
@@ -353,6 +394,7 @@ export default function App() {
               onChange={setBlocked}
               type="date"
               isSample={blocked === DEFAULTS.blocked}
+              warning={dateWarnings.blocked}
               hint="Data em que o sistema bloqueou a conexão (considerando feriados/finais de semana)."
             />
             <Field
@@ -360,7 +402,7 @@ export default function App() {
               value={reactivation}
               onChange={setReactivation}
               type="date"
-              isSample={reactivation === defaultReactivation}
+              warning={dateWarnings.reactivation}
             />
           </div>
           <Field
@@ -677,7 +719,9 @@ export default function App() {
         <div className="sidebar-bottom">
           <button
             className={`history-link ${showHistory ? "is-open" : ""}`}
-            onClick={() => setShowHistory((v) => !v)}
+            aria-haspopup="dialog"
+            aria-expanded={showHistory}
+            onClick={() => setShowHistory(true)}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -741,6 +785,13 @@ export default function App() {
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
                 <span>Como funciona o cálculo</span>
+              </button>
+              <button type="button" className="how-btn how-btn-compact" onClick={() => setShowHistory(true)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>Histórico{history.length > 0 ? ` (${history.length})` : ""}</span>
               </button>
               <span className="mode-chip">
                 <span className="chip-icon">{activeModeObj.icon}</span>
@@ -912,6 +963,12 @@ export default function App() {
                   </div>
                 </div>
 
+                {c.valid && hasDateWarnings && (
+                  <div className="validation">
+                    <strong>Confira as datas.</strong> {Object.values(dateWarnings).join(" ")} Se estiver correto, siga normalmente; se não, ajuste os campos destacados em amarelo.
+                  </div>
+                )}
+
                 {!c.valid && (
                   <div className="validation">
                     Existem campos obrigatórios vazios ou datas fora de ordem. Revise os campos destacados em vermelho.
@@ -965,29 +1022,40 @@ export default function App() {
             </div>
           </section>
 
-          {showHistory && (
-            <section className="panel history-panel">
-              <div className="panel-heading">
-                <div className="heading-left">
-                  <span className="step">↺</span>
-                  <div>
-                    <h3>Histórico local de simulações</h3>
-                    <p>Armazenado exclusivamente neste navegador.</p>
-                  </div>
-                </div>
-                {history.length > 0 && (
-                  <button
-                    className="text-btn danger-btn"
-                    onClick={() => {
-                      if (confirm("Deseja apagar todo o histórico salvo neste navegador?")) setHistory([]);
-                    }}
-                  >
-                    Limpar tudo
-                  </button>
-                )}
+          <footer className="footer">
+            <div>
+              <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
+            </div>
+            <p className="confidential-note">
+              <strong>Aviso sobre o sistema:</strong> Este sistema é de uso exclusivamente interno. Seu conteúdo, telas e regras não devem ser divulgados, compartilhados ou encaminhados a pessoas externas à empresa (a mensagem gerada no Passo 03 destina-se ao envio ao cliente).
+            </p>
+          </footer>
+        </div>
+      </main>
+
+      {showHistory && (
+        <>
+          <div className="drawer-overlay" onClick={() => setShowHistory(false)} />
+          <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="history-title">
+            <div className="drawer-head">
+              <div>
+                <h3 id="history-title">Histórico de simulações</h3>
+                <p>Armazenado exclusivamente neste navegador.</p>
               </div>
+              <button
+                ref={drawerCloseRef}
+                type="button"
+                className="drawer-close"
+                aria-label="Fechar histórico"
+                onClick={() => setShowHistory(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="drawer-body">
               {history.length === 0 ? (
-                <p className="empty">Nenhuma simulação salva neste dispositivo ainda.</p>
+                <p className="empty">Nenhuma simulação salva neste dispositivo ainda. Use “Salvar simulação no histórico” para guardar um resultado.</p>
               ) : (
                 <div className="history-list">
                   {history.map((h) => (
@@ -1003,19 +1071,27 @@ export default function App() {
                   ))}
                 </div>
               )}
-            </section>
-          )}
-
-          <footer className="footer">
-            <div>
-              <strong>VITAL NET TELECOM</strong> <span>•</span> Ferramenta interna de apoio <span>•</span> Confira os critérios vigentes antes de efetivar cobranças.
             </div>
-            <p className="confidential-note">
-              <strong>Aviso sobre o sistema:</strong> Este sistema é de uso exclusivamente interno. Seu conteúdo, telas e regras não devem ser divulgados, compartilhados ou encaminhados a pessoas externas à empresa (a mensagem gerada no Passo 03 destina-se ao envio ao cliente).
-            </p>
-          </footer>
-        </div>
-      </main>
+
+            {history.length > 0 && (
+              <div className="drawer-foot">
+                <span>
+                  {history.length} {history.length === 1 ? "simulação salva" : "simulações salvas"}
+                </span>
+                <button
+                  type="button"
+                  className="text-btn danger-btn"
+                  onClick={() => {
+                    if (confirm("Deseja apagar todo o histórico salvo neste navegador?")) setHistory([]);
+                  }}
+                >
+                  Limpar tudo
+                </button>
+              </div>
+            )}
+          </aside>
+        </>
+      )}
 
       {showHowItWorks && (
         <div
