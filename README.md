@@ -124,10 +124,12 @@ Utilizado na migração para um plano superior (modelo pré-pago), cobrando prop
   * Os campos carregam inicialmente com valores de exemplo sinalizados pela badge **`EXEMPLO`** e por um banner informativo no topo do formulário.
   * Assim que o operador edita um campo, o marcador de exemplo daquele campo desaparece automaticamente.
   * Botão **`Limpar campos`** para zerar rapidamente o formulário ao iniciar um novo atendimento e **`Restaurar exemplo`** para voltar aos valores demonstrativos.
+  * A **Data da reativação** nunca é tratada como exemplo: ela já vem com a data de hoje (também depois de `Limpar campos`), pois é o valor esperado na maioria dos atendimentos.
+* **Avisos de Datas na Reativação (não bloqueantes):** se o bloqueio estiver antes do vencimento, ou a reativação depois do próximo vencimento, o campo fica em amarelo com a badge **`Confira`**, uma mensagem explica que nenhum dia será contado naquele período e um resumo aparece no painel de resultado. O cálculo continua disponível.
 * **Validação Visual de Campos Obrigatórios:** Campos obrigatórios vazios recebem destaque em vermelho, badge **`Campo vazio`** e mensagem orientativa, bloqueando o salvamento no histórico até que os dados estejam válidos.
 * **Modal Explicativo (`Como funciona o cálculo`):** Janela centralizada sobreposta à tela (fechável pelo botão `×`, clique externo ou tecla `Esc`) que explica passo a passo a lógica matemática utilizando os valores reais da simulação ativa.
 * **Script Pronto com Cópia Rápida:** Gera automaticamente o texto explicativo completo para o cliente com botão **`Copiar mensagem`** e feedback visual.
-* **Histórico Local Persistente:** Armazena até 60 simulações salvas no `localStorage` do navegador (`vitalnet-proportional-history`), permitindo consulta rápida e limpeza completa quando necessário.
+* **Histórico Local Persistente:** Armazena até 60 simulações salvas no `localStorage` do navegador (`vitalnet-proportional-history`). Abre em uma **gaveta lateral** sempre visível (botão na barra lateral ou, no celular, ao lado de `Como funciona o cálculo`); fecha com `×`, clique fora ou `Esc`. Permite limpeza completa quando necessário.
 * **Design Responsivo:** Adaptado para desktops e dispositivos móveis utilizados pela equipe de atendimento.
 
 ## Tecnologias Utilizadas
