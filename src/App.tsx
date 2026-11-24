@@ -285,6 +285,8 @@ export default function App() {
   }, [mode, m, due, blocked, reactivation, nextDue, oldDue, newDue, oldM, newM, equipmentDate, upgradeDue]);
 
   const message = useMemo(() => {
+    // Sem dados válidos não existe mensagem: evita copiar um texto com "R$ 0,00" e datas "—"
+    if (!(calc as any).valid) return "";
     if (mode === "reativacao") {
       const c = calc as any;
       return `Verifiquei que sua mensalidade é no valor de ${brl(m)}.\n\nPara regularizar e reativar a conexão, precisamos considerar os dias em que o serviço foi utilizado após o vencimento do primeiro boleto.\n\nA sua conexão continuou funcionando até o dia ${dateBR(blocked)}, ou seja, foram ${c.usedDays} dias de uso após o vencimento de ${dateBR(due)}.\nTambém estamos considerando a ativação da conexão de ${dateBR(reactivation)} até o próximo vencimento, que será em ${dateBR(nextDue)}, totalizando ${c.futureDays} dias de uso.\n\nFizemos o cálculo proporcional da seguinte forma:\n\n📌 ${brl(m)} / 30 dias = ${brl(c.daily)} por dia de uso\n\n${c.usedDays} dias usados após o vencimento de ${dateBR(due)}\n→ ${c.usedDays} x ${brl(c.daily)} = ${brl(c.used)}\n\n${c.futureDays} dias de hoje até o próximo vencimento (${dateBR(nextDue)})\n→ ${c.futureDays} x ${brl(c.daily)} = ${brl(c.future)}\n\n✅ Valor total calculado: ${brl(c.used)} + ${brl(c.future)} = ${brl(c.raw)}\n\nPorém, iremos arredondar o valor para ${brl(c.rounded)}.\n\nEsse valor cobre o período em que o serviço foi utilizado e o período que será utilizado até o próximo vencimento.`;
@@ -321,6 +323,10 @@ export default function App() {
   };
 
   const copy = async () => {
+    if (!message) {
+      setToast("Preencha os campos obrigatórios para gerar a mensagem.");
+      return;
+    }
     try {
       await navigator.clipboard.writeText(message);
       setCopied(true);
@@ -996,7 +1002,7 @@ export default function App() {
                   <p>Script gerado automaticamente pronto para colar no atendimento.</p>
                 </div>
               </div>
-              <button className={`copy-btn ${copied ? "is-copied" : ""}`} onClick={copy}>
+              <button className={`copy-btn ${copied ? "is-copied" : ""}`} onClick={copy} disabled={!message}>
                 {copied ? (
                   <>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -1015,7 +1021,12 @@ export default function App() {
                 )}
               </button>
             </div>
-            <textarea className="message-box" value={message} readOnly />
+            <textarea
+              className="message-box"
+              value={message}
+              readOnly
+              placeholder="A mensagem aparece aqui assim que todos os campos obrigatórios estiverem preenchidos e as datas estiverem em ordem."
+            />
             <div className="message-footer">
               <span>Texto pronto para envio ao cliente — revise os valores e datas antes de encaminhar.</span>
               <span className="wa-badge">● Formatação otimizada para WhatsApp</span>
