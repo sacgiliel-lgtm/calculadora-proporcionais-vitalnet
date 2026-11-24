@@ -434,7 +434,7 @@ export default function App() {
               <div>
                 <strong>Dias adicionais de uso (opcional)</strong>
                 <p>
-                  Opcional: digite a quantidade de dias a mais de uso para somar ao cálculo — ideal para casos de <b>desbloqueios</b> (ex.: dia de bloqueio/desbloqueio) ou outros ajustes extras de uso.
+                  Opcional: digite a quantidade de dias a mais de uso para somar ao cálculo — ideal para casos de <b>desbloqueios</b> ou outros ajustes extras de uso.
                 </p>
               </div>
               <label className="extra-days-field">
