@@ -160,6 +160,7 @@ export default function App() {
   const [blocked, setBlocked] = useState(DEFAULTS.blocked);
   const [reactivation, setReactivation] = useState(() => today());
   const [nextDue, setNextDue] = useState(DEFAULTS.nextDue);
+  const [extraDays, setExtraDays] = useState(0);
   const [oldDue, setOldDue] = useState(DEFAULTS.oldDue);
   const [newDue, setNewDue] = useState(DEFAULTS.newDue);
   const [oldPlan, setOldPlan] = useState(DEFAULTS.oldPlan);
@@ -247,7 +248,9 @@ export default function App() {
   const calc = useMemo(() => {
     if (mode === "reativacao") {
       const daily = safe(m / 30);
-      const usedDays = due && blocked ? Math.max(0, dayDiff(due, blocked)) : 0;
+      const baseUsedDays = due && blocked ? Math.max(0, dayDiff(due, blocked)) : 0;
+      const safeExtraDays = Math.max(0, Math.floor(Number(extraDays) || 0));
+      const usedDays = baseUsedDays + safeExtraDays;
       const futureDays = reactivation && nextDue ? Math.max(0, dayDiff(reactivation, nextDue) + 1) : 0;
       const used = safe(daily * usedDays),
         future = safe(daily * futureDays),
@@ -255,6 +258,8 @@ export default function App() {
         rounded = round5(raw);
       return {
         daily,
+        baseUsedDays,
+        extraDays: safeExtraDays,
         usedDays,
         futureDays,
         used,
@@ -262,7 +267,7 @@ export default function App() {
         raw,
         rounded,
         total: rounded,
-        valid: m > 0 && usedDays >= 0 && futureDays >= 0 && !!due && !!blocked && !!reactivation && !!nextDue,
+        valid: m > 0 && baseUsedDays >= 0 && safeExtraDays >= 0 && futureDays >= 0 && !!due && !!blocked && !!reactivation && !!nextDue,
       };
     }
     if (mode === "vencimento") {
@@ -282,14 +287,18 @@ export default function App() {
       rounded = round5(raw),
       total = safe(newM + rounded);
     return { difference, daily, days, start, raw, rounded, total, valid: oldM >= 0 && newM > oldM && !!upgradeDue && days > 0 };
-  }, [mode, m, due, blocked, reactivation, nextDue, oldDue, newDue, oldM, newM, equipmentDate, upgradeDue]);
+  }, [mode, m, due, blocked, reactivation, nextDue, extraDays, oldDue, newDue, oldM, newM, equipmentDate, upgradeDue]);
 
   const message = useMemo(() => {
     // Sem dados válidos não existe mensagem: evita copiar um texto com "R$ 0,00" e datas "—"
     if (!(calc as any).valid) return "";
     if (mode === "reativacao") {
       const c = calc as any;
-      return `Verifiquei que sua mensalidade é no valor de ${brl(m)}.\n\nPara regularizar e reativar a conexão, precisamos considerar os dias em que o serviço foi utilizado após o vencimento do primeiro boleto.\n\nA sua conexão continuou funcionando até o dia ${dateBR(blocked)}, ou seja, foram ${c.usedDays} dias de uso após o vencimento de ${dateBR(due)}.\nTambém estamos considerando a ativação da conexão de ${dateBR(reactivation)} até o próximo vencimento, que será em ${dateBR(nextDue)}, totalizando ${c.futureDays} dias de uso.\n\nFizemos o cálculo proporcional da seguinte forma:\n\n📌 ${brl(m)} / 30 dias = ${brl(c.daily)} por dia de uso\n\n${c.usedDays} dias usados após o vencimento de ${dateBR(due)}\n→ ${c.usedDays} x ${brl(c.daily)} = ${brl(c.used)}\n\n${c.futureDays} dias de hoje até o próximo vencimento (${dateBR(nextDue)})\n→ ${c.futureDays} x ${brl(c.daily)} = ${brl(c.future)}\n\n✅ Valor total calculado: ${brl(c.used)} + ${brl(c.future)} = ${brl(c.raw)}\n\nPorém, iremos arredondar o valor para ${brl(c.rounded)}.\n\nEsse valor cobre o período em que o serviço foi utilizado e o período que será utilizado até o próximo vencimento.`;
+      const extraNote =
+        c.extraDays > 0
+          ? ` (sendo ${c.baseUsedDays} ${c.baseUsedDays === 1 ? "dia" : "dias"} do período até o bloqueio + ${c.extraDays} ${c.extraDays === 1 ? "dia adicional" : "dias adicionais"} de ajuste/desbloqueios)`
+          : "";
+      return `Verifiquei que sua mensalidade é no valor de ${brl(m)}.\n\nPara regularizar e reativar a conexão, precisamos considerar os dias em que o serviço foi utilizado após o vencimento do primeiro boleto.\n\nA sua conexão continuou funcionando até o dia ${dateBR(blocked)}, ou seja, foram ${c.usedDays} dias de uso após o vencimento de ${dateBR(due)}${extraNote}.\nTambém estamos considerando a ativação da conexão de ${dateBR(reactivation)} até o próximo vencimento, que será em ${dateBR(nextDue)}, totalizando ${c.futureDays} dias de uso.\n\nFizemos o cálculo proporcional da seguinte forma:\n\n📌 ${brl(m)} / 30 dias = ${brl(c.daily)} por dia de uso\n\n${c.usedDays} dias usados após o vencimento de ${dateBR(due)}${extraNote}\n→ ${c.usedDays} x ${brl(c.daily)} = ${brl(c.used)}\n\n${c.futureDays} dias de hoje até o próximo vencimento (${dateBR(nextDue)})\n→ ${c.futureDays} x ${brl(c.daily)} = ${brl(c.future)}\n\n✅ Valor total calculado: ${brl(c.used)} + ${brl(c.future)} = ${brl(c.raw)}\n\nPorém, iremos arredondar o valor para ${brl(c.rounded)}.\n\nEsse valor cobre o período em que o serviço foi utilizado e o período que será utilizado até o próximo vencimento.`;
     }
     if (mode === "vencimento") {
       const c = calc as any;
@@ -313,7 +322,7 @@ export default function App() {
       date: today(),
       details:
         mode === "reativacao"
-          ? `${c.usedDays} + ${c.futureDays} dias · proporcional ${brl(c.raw)} → ${brl(c.rounded)}`
+          ? `${c.usedDays}${c.extraDays > 0 ? ` (${c.baseUsedDays}+${c.extraDays})` : ""} + ${c.futureDays} dias · proporcional ${brl(c.raw)} → ${brl(c.rounded)}`
           : mode === "vencimento"
             ? `${c.days} dias · proporcional ${brl(c.rounded)} + taxa R$ 1,20`
             : `${c.days} dias · proporcional ${brl(c.rounded)}`,
@@ -344,6 +353,7 @@ export default function App() {
       setBlocked("");
       setReactivation(today()); // a reativação normalmente é hoje: já vem preenchida, sem marcar como exemplo
       setNextDue("");
+      setExtraDays(0);
     } else if (mode === "vencimento") {
       setMonthly("");
       setOldDue("");
@@ -363,6 +373,7 @@ export default function App() {
     setBlocked(DEFAULTS.blocked);
     setReactivation(today());
     setNextDue(DEFAULTS.nextDue);
+    setExtraDays(0);
     setOldDue(DEFAULTS.oldDue);
     setNewDue(DEFAULTS.newDue);
     setOldPlan(DEFAULTS.oldPlan);
@@ -418,10 +429,45 @@ export default function App() {
             type="date"
             isSample={nextDue === DEFAULTS.nextDue}
           />
+          <div className="extra-days-box">
+            <div className="extra-days-head">
+              <div>
+                <strong>Dias adicionais manuais</strong>
+                <p>
+                  Digite a quantidade de dias a mais para somar ao cálculo — ideal para casos de <b>desbloqueios</b> (ex.: dia de bloqueio/desbloqueio) ou outros ajustes extras de uso.
+                </p>
+              </div>
+              <label className="extra-days-field">
+                <span>Quantidade de dias a mais</span>
+                <div className="extra-days-input-wrap">
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    value={extraDays === 0 ? "" : String(extraDays)}
+                    placeholder="0"
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") {
+                        setExtraDays(0);
+                        return;
+                      }
+                      const parsed = Math.max(0, Math.floor(Number(raw)));
+                      setExtraDays(Number.isFinite(parsed) ? parsed : 0);
+                    }}
+                  />
+                  <span className="extra-days-unit">
+                    {extraDays === 1 ? "dia extra" : "dias extras"}
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
           <div className="notice">
             <span className="notice-icon">ℹ</span>
             <div>
-              A contagem futura inclui o dia da reativação e o próximo vencimento. O período em atraso conta a partir do dia seguinte ao vencimento até o bloqueio.
+              A contagem futura inclui o dia da reativação e o próximo vencimento. O período em atraso conta a partir do dia seguinte ao vencimento até o bloqueio{extraDays > 0 ? `, somando +${extraDays} ${extraDays === 1 ? "dia manual" : "dias manuais"} (total de ${c.usedDays} dias usados)` : ""}.
             </div>
           </div>
         </>
@@ -535,10 +581,10 @@ export default function App() {
             <div>
               <strong>Dias utilizados após o vencimento até o bloqueio</strong>
               <p>
-                Calculamos a diferença de dias entre o vencimento considerado (<b>{dateBR(due)}</b>) e a data efetiva do bloqueio (<b>{dateBR(blocked)}</b>) e multiplicamos pelo valor diário.
+                Calculamos a diferença de dias entre o vencimento considerado (<b>{dateBR(due)}</b>) e a data efetiva do bloqueio (<b>{dateBR(blocked)}</b>){c.extraDays > 0 ? <> e somamos <b>+{c.extraDays} {c.extraDays === 1 ? "dia manual" : "dias manuais"}</b> (ex.: desbloqueios ou ajustes extras)</> : ""} antes de multiplicar pelo valor diário.
               </p>
               <code>
-                {c.usedDays} dias × {brl(c.daily)} = {brl(c.used)}
+                {c.extraDays > 0 ? `${c.baseUsedDays} + ${c.extraDays} = ` : ""}{c.usedDays} dias × {brl(c.daily)} = {brl(c.used)}
               </code>
             </div>
           </div>
@@ -890,7 +936,14 @@ export default function App() {
                         </strong>
                       </div>
                     </div>
-                    <ResultLine label={`${c.usedDays} dias usados após o vencimento`} value={brl(c.used)} />
+                    <ResultLine
+                      label={
+                        c.extraDays > 0
+                          ? `${c.usedDays} dias usados (${c.baseUsedDays} base + ${c.extraDays} manual)`
+                          : `${c.usedDays} dias usados após o vencimento`
+                      }
+                      value={brl(c.used)}
+                    />
                     <ResultLine label={`${c.futureDays} dias até o próximo vencimento`} value={brl(c.future)} />
                     <ResultLine label="Subtotal antes do arredondamento" value={brl(c.raw)} muted />
                     <div className="rounding-note">
