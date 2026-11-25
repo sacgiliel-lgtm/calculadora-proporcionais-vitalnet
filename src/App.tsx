@@ -184,6 +184,17 @@ export default function App() {
   const [newPlan, setNewPlan] = useState(DEFAULTS.newPlan);
   const [equipmentDate, setEquipmentDate] = useState("");
   const [upgradeDue, setUpgradeDue] = useState(DEFAULTS.upgradeDue);
+  const [sampleFlags, setSampleFlags] = useState({
+    monthly: true,
+    due: true,
+    blocked: true,
+    nextDue: true,
+    oldDue: true,
+    newDue: true,
+    oldPlan: true,
+    newPlan: true,
+    upgradeDue: true,
+  });
   const [copied, setCopied] = useState(false);
   const [history, setHistory] = useState<Saved[]>(() => {
     try {
@@ -235,20 +246,19 @@ export default function App() {
     oldM = moneyNumber(oldPlan),
     newM = moneyNumber(newPlan);
 
+  const markEdited = (key: keyof typeof sampleFlags) => {
+    setSampleFlags((prev) => (prev[key] ? { ...prev, [key]: false } : prev));
+  };
+
   const hasSampleValues = useMemo(() => {
     if (mode === "reativacao") {
-      return (
-        monthly === DEFAULTS.monthly ||
-        due === DEFAULTS.due ||
-        blocked === DEFAULTS.blocked ||
-        nextDue === DEFAULTS.nextDue
-      );
+      return Boolean(sampleFlags.monthly || sampleFlags.due || sampleFlags.blocked || sampleFlags.nextDue);
     }
     if (mode === "vencimento") {
-      return monthly === DEFAULTS.monthly || oldDue === DEFAULTS.oldDue || newDue === DEFAULTS.newDue;
+      return Boolean(sampleFlags.monthly || sampleFlags.oldDue || sampleFlags.newDue);
     }
-    return oldPlan === DEFAULTS.oldPlan || newPlan === DEFAULTS.newPlan || upgradeDue === DEFAULTS.upgradeDue;
-  }, [mode, monthly, due, blocked, nextDue, oldDue, newDue, oldPlan, newPlan, upgradeDue]);
+    return Boolean(sampleFlags.oldPlan || sampleFlags.newPlan || sampleFlags.upgradeDue);
+  }, [mode, sampleFlags]);
 
   // Avisos (não bloqueiam o cálculo): datas que contradizem o fluxo normal da reativação
   const dateWarnings = useMemo(() => {
@@ -371,15 +381,18 @@ export default function App() {
       setReactivation(today()); // a reativação normalmente é hoje: já vem preenchida, sem marcar como exemplo
       setNextDue("");
       setExtraDays(0);
+      setSampleFlags((prev) => ({ ...prev, monthly: false, due: false, blocked: false, nextDue: false }));
     } else if (mode === "vencimento") {
       setMonthly("");
       setOldDue("");
       setNewDue("");
+      setSampleFlags((prev) => ({ ...prev, monthly: false, oldDue: false, newDue: false }));
     } else {
       setOldPlan("");
       setNewPlan("");
       setEquipmentDate("");
       setUpgradeDue("");
+      setSampleFlags((prev) => ({ ...prev, oldPlan: false, newPlan: false, upgradeDue: false }));
     }
     setToast("Campos limpos. Preencha os dados do cliente.");
   };
@@ -397,6 +410,17 @@ export default function App() {
     setNewPlan(DEFAULTS.newPlan);
     setEquipmentDate("");
     setUpgradeDue(DEFAULTS.upgradeDue);
+    setSampleFlags({
+      monthly: true,
+      due: true,
+      blocked: true,
+      nextDue: true,
+      oldDue: true,
+      newDue: true,
+      oldPlan: true,
+      newPlan: true,
+      upgradeDue: true,
+    });
     setToast("Valores de exemplo restaurados.");
   };
 
@@ -409,16 +433,22 @@ export default function App() {
               label="Valor da mensalidade"
               prefix="R$"
               value={monthly}
-              onChange={setMonthly}
+              onChange={(v) => {
+                markEdited("monthly");
+                setMonthly(v);
+              }}
               placeholder="80,00"
-              isSample={monthly === DEFAULTS.monthly}
+              isSample={sampleFlags.monthly}
             />
             <Field
-              label="1º vencimento em atraso"
+              label="Vencimento do boleto considerado"
               value={due}
-              onChange={setDue}
+              onChange={(v) => {
+                markEdited("due");
+                setDue(v);
+              }}
               type="date"
-              isSample={due === DEFAULTS.due}
+              isSample={sampleFlags.due}
               tooltip="Data de vencimento do primeiro boleto em atraso que ocasionou o bloqueio do contrato."
             />
           </div>
@@ -426,9 +456,12 @@ export default function App() {
             <Field
               label="Data efetiva do bloqueio"
               value={blocked}
-              onChange={setBlocked}
+              onChange={(v) => {
+                markEdited("blocked");
+                setBlocked(v);
+              }}
               type="date"
-              isSample={blocked === DEFAULTS.blocked}
+              isSample={sampleFlags.blocked}
               warning={dateWarnings.blocked}
               hint="Data em que o sistema bloqueou a conexão (considerando feriados/finais de semana)."
             />
@@ -443,9 +476,12 @@ export default function App() {
           <Field
             label="Próximo vencimento"
             value={nextDue}
-            onChange={setNextDue}
+            onChange={(v) => {
+              markEdited("nextDue");
+              setNextDue(v);
+            }}
             type="date"
-            isSample={nextDue === DEFAULTS.nextDue}
+            isSample={sampleFlags.nextDue}
           />
           <div className="extra-days-box">
             <div className="extra-days-head">
@@ -499,24 +535,33 @@ export default function App() {
               label="Valor da mensalidade"
               prefix="R$"
               value={monthly}
-              onChange={setMonthly}
+              onChange={(v) => {
+                markEdited("monthly");
+                setMonthly(v);
+              }}
               placeholder="80,00"
-              isSample={monthly === DEFAULTS.monthly}
+              isSample={sampleFlags.monthly}
             />
             <Field
               label="Vencimento atual"
               value={oldDue}
-              onChange={setOldDue}
+              onChange={(v) => {
+                markEdited("oldDue");
+                setOldDue(v);
+              }}
               type="date"
-              isSample={oldDue === DEFAULTS.oldDue}
+              isSample={sampleFlags.oldDue}
             />
           </div>
           <Field
             label="Novo vencimento"
             value={newDue}
-            onChange={setNewDue}
+            onChange={(v) => {
+              markEdited("newDue");
+              setNewDue(v);
+            }}
             type="date"
-            isSample={newDue === DEFAULTS.newDue}
+            isSample={sampleFlags.newDue}
           />
           <div className="notice">
             <span className="notice-icon">ℹ</span>
@@ -534,17 +579,23 @@ export default function App() {
             label="Mensalidade atual"
             prefix="R$"
             value={oldPlan}
-            onChange={setOldPlan}
+            onChange={(v) => {
+              markEdited("oldPlan");
+              setOldPlan(v);
+            }}
             placeholder="100,00"
-            isSample={oldPlan === DEFAULTS.oldPlan}
+            isSample={sampleFlags.oldPlan}
           />
           <Field
             label="Nova mensalidade"
             prefix="R$"
             value={newPlan}
-            onChange={setNewPlan}
+            onChange={(v) => {
+              markEdited("newPlan");
+              setNewPlan(v);
+            }}
             placeholder="160,00"
-            isSample={newPlan === DEFAULTS.newPlan}
+            isSample={sampleFlags.newPlan}
           />
         </div>
         <div className="field-grid">
@@ -559,9 +610,12 @@ export default function App() {
           <Field
             label="Próximo vencimento"
             value={upgradeDue}
-            onChange={setUpgradeDue}
+            onChange={(v) => {
+              markEdited("upgradeDue");
+              setUpgradeDue(v);
+            }}
             type="date"
-            isSample={upgradeDue === DEFAULTS.upgradeDue}
+            isSample={sampleFlags.upgradeDue}
           />
         </div>
         <div className="notice">
