@@ -1,7 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Mode = "reativacao" | "vencimento" | "upgrade";
+type MessageChannel = "whatsapp" | "protocolo" | "formal";
 type Saved = { id: string; mode: Mode; title: string; total: number; date: string; details: string };
+
+const channels: { id: MessageChannel; label: string; badge: string; hint: string }[] = [
+  {
+    id: "whatsapp",
+    label: "WhatsApp",
+    badge: "Formatação otimizada para WhatsApp",
+    hint: "Texto direto e claro com passo a passo para envio ao cliente.",
+  },
+  {
+    id: "protocolo",
+    label: "Protocolo / ERP",
+    badge: "Registro resumido para Voalle / protocolo",
+    hint: "Linha objetiva pronta para colar no relato do atendimento.",
+  },
+  {
+    id: "formal",
+    label: "Formal / E-mail",
+    badge: "Comunicação formal detalhada",
+    hint: "Explicação estruturada para e-mail ou detalhamento formal.",
+  },
+];
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const today = () => {
@@ -195,7 +217,17 @@ export default function App() {
     newPlan: true,
     upgradeDue: true,
   });
+  const [channel, setChannel] = useState<MessageChannel>(() => {
+    try {
+      const saved = localStorage.getItem("vitalnet-proportional-channel");
+      if (saved === "whatsapp" || saved === "protocolo" || saved === "formal") return saved;
+    } catch {
+      /* ignora falha de storage */
+    }
+    return "whatsapp";
+  });
   const [copied, setCopied] = useState(false);
+  const [copiedProtocol, setCopiedProtocol] = useState(false);
   const [history, setHistory] = useState<Saved[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("vitalnet-proportional-history") || "[]");
@@ -226,6 +258,14 @@ export default function App() {
       /* armazenamento indisponível (ex.: aba privada): segue sem persistir */
     }
   }, [history]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("vitalnet-proportional-channel", channel);
+    } catch {
+      /* armazenamento indisponível: segue sem persistir */
+    }
+  }, [channel]);
 
   useEffect(() => {
     if (!showHowItWorks && !showHistory) return;
@@ -327,24 +367,39 @@ export default function App() {
     return { difference, daily, days, start, raw, rounded, total, valid: oldM >= 0 && newM > oldM && !!upgradeDue && days > 0 };
   }, [mode, m, due, blocked, reactivation, nextDue, extraDays, oldDue, newDue, oldM, newM, equipmentDate, upgradeDue]);
 
-  const message = useMemo(() => {
+  const messagesByChannel = useMemo<Record<MessageChannel, string>>(() => {
     // Sem dados válidos não existe mensagem: evita copiar um texto com "R$ 0,00" e datas "—"
-    if (!(calc as any).valid) return "";
+    if (!(calc as any).valid) return { whatsapp: "", protocolo: "", formal: "" };
     if (mode === "reativacao") {
       const c = calc as any;
       const extraNote =
         c.extraDays > 0
           ? ` (sendo ${c.baseUsedDays} ${c.baseUsedDays === 1 ? "dia" : "dias"} do período até o bloqueio + ${c.extraDays} ${c.extraDays === 1 ? "dia adicional" : "dias adicionais"} de ajuste/desbloqueios)`
           : "";
-      return `Verifiquei que sua mensalidade é no valor de ${brl(m)}.\n\nPara regularizar e reativar a conexão, precisamos considerar os dias em que o serviço foi utilizado após o vencimento do primeiro boleto.\n\nA sua conexão continuou funcionando até o dia ${dateBR(blocked)}, ou seja, foram ${c.usedDays} dias de uso após o vencimento de ${dateBR(due)}${extraNote}.\nTambém estamos considerando a ativação da conexão de ${dateBR(reactivation)} até o próximo vencimento, que será em ${dateBR(nextDue)}, totalizando ${c.futureDays} dias de uso.\n\nFizemos o cálculo proporcional da seguinte forma:\n\n📌 ${brl(m)} / 30 dias = ${brl(c.daily)} por dia de uso\n\n${c.usedDays} dias usados após o vencimento de ${dateBR(due)}${extraNote}\n→ ${c.usedDays} x ${brl(c.daily)} = ${brl(c.used)}\n\n${c.futureDays} dias de hoje até o próximo vencimento (${dateBR(nextDue)})\n→ ${c.futureDays} x ${brl(c.daily)} = ${brl(c.future)}\n\n✅ Valor total calculado: ${brl(c.used)} + ${brl(c.future)} = ${brl(c.raw)}\n\nPorém, iremos arredondar o valor para ${brl(c.rounded)}.\n\nEsse valor cobre o período em que o serviço foi utilizado e o período que será utilizado até o próximo vencimento.`;
+      const extraShort = c.extraDays > 0 ? ` (${c.baseUsedDays}+${c.extraDays})` : "";
+      return {
+        whatsapp: `Verifiquei que sua mensalidade é no valor de ${brl(m)}.\n\nPara regularizar e reativar a conexão, precisamos considerar os dias em que o serviço foi utilizado após o vencimento do primeiro boleto.\n\nA sua conexão continuou funcionando até o dia ${dateBR(blocked)}, ou seja, foram ${c.usedDays} dias de uso após o vencimento de ${dateBR(due)}${extraNote}.\nTambém estamos considerando a ativação da conexão de ${dateBR(reactivation)} até o próximo vencimento, que será em ${dateBR(nextDue)}, totalizando ${c.futureDays} dias de uso.\n\nFizemos o cálculo proporcional da seguinte forma:\n\n📌 ${brl(m)} / 30 dias = ${brl(c.daily)} por dia de uso\n\n${c.usedDays} dias usados após o vencimento de ${dateBR(due)}${extraNote}\n→ ${c.usedDays} x ${brl(c.daily)} = ${brl(c.used)}\n\n${c.futureDays} dias de hoje até o próximo vencimento (${dateBR(nextDue)})\n→ ${c.futureDays} x ${brl(c.daily)} = ${brl(c.future)}\n\n✅ Valor total calculado: ${brl(c.used)} + ${brl(c.future)} = ${brl(c.raw)}\n\nPorém, iremos arredondar o valor para ${brl(c.rounded)}.\n\nEsse valor cobre o período em que o serviço foi utilizado e o período que será utilizado até o próximo vencimento.`,
+        protocolo: `[CÁLCULO REATIVAÇÃO] Mensalidade: ${brl(m)} (${brl(c.daily)}/dia) | Venc. considerado: ${dateBR(due)} | Bloqueio: ${dateBR(blocked)} | Reativação: ${dateBR(reactivation)} | Próx. venc.: ${dateBR(nextDue)} | Dias: ${c.usedDays}${extraShort} usados + ${c.futureDays} futuros = ${c.usedDays + c.futureDays}d | Bruto: ${brl(c.raw)} → Arredondado: ${brl(c.rounded)}.`,
+        formal: `Prezado(a),\n\nInformamos o detalhamento do cálculo proporcional referente à reativação do seu contrato, cuja mensalidade regular é de ${brl(m)} (equivalente a ${brl(c.daily)} por dia, considerando a base de 30 dias):\n\n1. Período utilizado após o vencimento (${dateBR(due)} até ${dateBR(blocked)}): ${c.usedDays} dias${extraNote}, totalizando ${brl(c.used)}.\n2. Período da reativação até o próximo vencimento (${dateBR(reactivation)} até ${dateBR(nextDue)}): ${c.futureDays} dias, totalizando ${brl(c.future)}.\n\nA soma dos dois períodos resulta em ${brl(c.raw)}, valor que foi arredondado conforme política interna para ${brl(c.rounded)}. Após a regularização deste valor proporcional, as cobranças seguintes seguirão normalmente no valor integral de ${brl(m)}.\n\nPermanecemos à disposição para qualquer esclarecimento.`,
+      };
     }
     if (mode === "vencimento") {
       const c = calc as any;
-      return `Quando um cliente solicita a mudança da data de vencimento da fatura, é necessário fazer um ajuste proporcional no valor da mensalidade para cobrir os dias a mais entre o vencimento atual e o novo vencimento.\n\nNo seu caso, o vencimento atual é ${dateBR(oldDue)}, e será alterado para ${dateBR(newDue)}. Como a mensalidade é de ${brl(m)}, dividimos esse valor por 30 para obter o valor diário:\n\n${brl(m)} ÷ 30 = ${brl(c.daily)} por dia\n\nDepois, calculamos a diferença entre o vencimento antigo e o novo vencimento, o que dá ${c.days} dias.\n\nAgora, multiplicamos o valor diário pela quantidade de dias adicionais:\n\n${brl(c.daily)} × ${c.days} = ${brl(c.raw)}\n\nO proporcional será arredondado para ${brl(c.rounded)}. Também será acrescentada a taxa de geração de boleto de R$ 1,20.\n\nSeu próximo pagamento será no dia ${dateBR(newDue)} e o valor será de ${brl(c.total)} (mensalidade de ${brl(m)} + proporcional de ${brl(c.rounded)} + taxa de R$ 1,20).\n\nApós esse ajuste, você seguirá normalmente pagando a mensalidade de ${brl(m)} todo mês, no novo dia de vencimento.\n\nEsse ajuste é necessário para garantir que o serviço continue ativo e corretamente coberto durante esse intervalo de dias a mais.\n\nSe estiver de acordo, me confirme e o procedimento será realizado.`;
+      return {
+        whatsapp: `Quando um cliente solicita a mudança da data de vencimento da fatura, é necessário fazer um ajuste proporcional no valor da mensalidade para cobrir os dias a mais entre o vencimento atual e o novo vencimento.\n\nNo seu caso, o vencimento atual é ${dateBR(oldDue)}, e será alterado para ${dateBR(newDue)}. Como a mensalidade é de ${brl(m)}, dividimos esse valor por 30 para obter o valor diário:\n\n${brl(m)} ÷ 30 = ${brl(c.daily)} por dia\n\nDepois, calculamos a diferença entre o vencimento antigo e o novo vencimento, o que dá ${c.days} dias.\n\nAgora, multiplicamos o valor diário pela quantidade de dias adicionais:\n\n${brl(c.daily)} × ${c.days} = ${brl(c.raw)}\n\nO proporcional será arredondado para ${brl(c.rounded)}. Também será acrescentada a taxa de geração de boleto de R$ 1,20.\n\nSeu próximo pagamento será no dia ${dateBR(newDue)} e o valor será de ${brl(c.total)} (mensalidade de ${brl(m)} + proporcional de ${brl(c.rounded)} + taxa de R$ 1,20).\n\nApós esse ajuste, você seguirá normalmente pagando a mensalidade de ${brl(m)} todo mês, no novo dia de vencimento.\n\nEsse ajuste é necessário para garantir que o serviço continue ativo e corretamente coberto durante esse intervalo de dias a mais.\n\nSe estiver de acordo, me confirme e o procedimento será realizado.`,
+        protocolo: `[CÁLCULO TROCA DE VENCIMENTO] Mensalidade: ${brl(m)} (${brl(c.daily)}/dia) | Venc. atual: ${dateBR(oldDue)} → Novo venc.: ${dateBR(newDue)} (${c.days} dias adicionais) | Prop. bruto: ${brl(c.raw)} → Arredondado: ${brl(c.rounded)} + Taxa R$ 1,20 | Total próx. fatura: ${brl(c.total)}.`,
+        formal: `Prezado(a),\n\nEm atenção à solicitação de alteração da data de vencimento da sua fatura de ${dateBR(oldDue)} para ${dateBR(newDue)}, apresentamos o demonstrativo do ajuste proporcional referente aos ${c.days} dias adicionais de cobertura:\n\n• Mensalidade base: ${brl(m)} (valor diário de ${brl(c.daily)} na base de 30 dias)\n• Proporcional referente a ${c.days} dias: ${brl(c.raw)} (arredondado para ${brl(c.rounded)})\n• Taxa de geração de boleto: R$ 1,20\n\nDessa forma, o valor total da próxima fatura com vencimento em ${dateBR(newDue)} será de ${brl(c.total)}. A partir dos ciclos subsequentes, será cobrada apenas a mensalidade regular de ${brl(m)} na nova data escolhida.\n\nSolicitamos sua confirmação para darmos sequência ao procedimento.`,
+      };
     }
     const c = calc as any;
-    return `Gostaríamos de informar que, ao aceitar o upgrade, a vigência contratual será renovada por mais um ano. Dessa forma, o contrato não poderá ser rescindido antes deste prazo, pois estará sujeito a multa rescisória.\n\nComo o seu plano é pré-pago, ao realizar uma mudança de plano, é necessário calcular um valor proporcional referente aos dias restantes do plano anterior até o início do novo plano.\n\nNesse caso, será feita a mudança e o valor proporcional será de ${brl(c.rounded)}, que será cobrado junto com o valor do novo plano no próximo vencimento, no dia ${dateBR(upgradeDue)}.\n\nOu seja, neste pagamento você irá pagar:\n\n${brl(newM)} referente ao novo plano mensal\n${brl(c.rounded)} referente ao proporcional da mudança de plano\n\nTotal da próxima cobrança: ${brl(c.total)}.\n\n*Importante:* essa cobrança proporcional acontece somente uma vez, por conta da troca de plano. A partir do mês seguinte, você pagará apenas o valor fixo da nova mensalidade, sem adicionais.\n\nSe estiver de acordo, forneça uma foto do documento de identidade com foto e assinatura do titular (CNH aberta ou RG frente e verso, juntamente com o CPF) para poder fazer o link de assinatura que estarei te enviando junto com o passo a passo de como assinar. Assim que tiver assinado, eu já vejo um horário disponível na agenda e confirmo com você.`;
-  }, [mode, calc, m, due, blocked, reactivation, nextDue, oldDue, newDue, newM, upgradeDue]);
+    return {
+      whatsapp: `Gostaríamos de informar que, ao aceitar o upgrade, a vigência contratual será renovada por mais um ano. Dessa forma, o contrato não poderá ser rescindido antes deste prazo, pois estará sujeito a multa rescisória.\n\nComo o seu plano é pré-pago, ao realizar uma mudança de plano, é necessário calcular um valor proporcional referente aos dias restantes do plano anterior até o início do novo plano.\n\nNesse caso, será feita a mudança e o valor proporcional será de ${brl(c.rounded)}, que será cobrado junto com o valor do novo plano no próximo vencimento, no dia ${dateBR(upgradeDue)}.\n\nOu seja, neste pagamento você irá pagar:\n\n${brl(newM)} referente ao novo plano mensal\n${brl(c.rounded)} referente ao proporcional da mudança de plano\n\nTotal da próxima cobrança: ${brl(c.total)}.\n\n*Importante:* essa cobrança proporcional acontece somente uma vez, por conta da troca de plano. A partir do mês seguinte, você pagará apenas o valor fixo da nova mensalidade, sem adicionais.\n\nSe estiver de acordo, forneça uma foto do documento de identidade com foto e assinatura do titular (CNH aberta ou RG frente e verso, juntamente com o CPF) para poder fazer o link de assinatura que estarei te enviando junto com o passo a passo de como assinar. Assim que tiver assinado, eu já vejo um horário disponível na agenda e confirmo com você.`,
+      protocolo: `[CÁLCULO UPGRADE DE PLANO] Plano atual: ${brl(oldM)} → Novo plano: ${brl(newM)} (dif. ${brl(c.difference)}/mês · ${brl(c.daily)}/dia) | Base inicial: ${dateBR(c.start)} | Próx. venc.: ${dateBR(upgradeDue)} (${c.days} dias) | Prop. bruto: ${brl(c.raw)} → Arredondado: ${brl(c.rounded)} | Total próx. fatura: ${brl(c.total)}.`,
+      formal: `Prezado(a),\n\nConforme solicitado, segue o detalhamento financeiro referente à alteração de plano de ${brl(oldM)} para ${brl(newM)} (diferença mensal de ${brl(c.difference)}, equivalente a ${brl(c.daily)}/dia):\n\n• Período proporcional (${dateBR(c.start)} até ${dateBR(upgradeDue)} — ${c.days} dias): ${brl(c.raw)}, arredondado para ${brl(c.rounded)}.\n• Valor da nova mensalidade integral: ${brl(newM)}.\n• Total previsto para o vencimento de ${dateBR(upgradeDue)}: ${brl(c.total)}.\n\nRessaltamos que a cobrança proporcional ocorre apenas nesta primeira fatura após a alteração; nos meses seguintes, será cobrado exclusivamente o valor fixo de ${brl(newM)}. A aceitação do upgrade implica renovação da vigência contratual por 12 meses.\n\nPara darmos continuidade à emissão do termo de aditivo para assinatura digital, solicitamos o envio de documento oficial com foto e assinatura do titular (CNH ou RG frente e verso e CPF).`,
+    };
+  }, [mode, calc, m, due, blocked, reactivation, nextDue, oldDue, newDue, oldM, newM, upgradeDue]);
+
+  const message = messagesByChannel[channel];
 
   const save = () => {
     if (!(calc as any).valid) {
@@ -379,6 +434,22 @@ export default function App() {
       setCopied(true);
       setToast("Mensagem copiada para a área de transferência.");
       setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setToast("Não foi possível copiar automaticamente. Selecione o texto e copie.");
+    }
+  };
+
+  const copyProtocol = async () => {
+    const text = messagesByChannel.protocolo;
+    if (!text) {
+      setToast("Preencha os campos obrigatórios para gerar o registro.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedProtocol(true);
+      setToast("Resumo de protocolo copiado para colar no ERP.");
+      setTimeout(() => setCopiedProtocol(false), 2000);
     } catch {
       setToast("Não foi possível copiar automaticamente. Selecione o texto e copie.");
     }
@@ -1079,6 +1150,83 @@ export default function App() {
                   </>
                 )}
 
+                <div className="compare-card" aria-label="Resumo comparativo antes e depois">
+                  <div className="compare-head">
+                    <span className="compare-title">Comparativo antes × depois</span>
+                    {c.valid && (
+                      <span
+                        className={`compare-delta ${
+                          mode === "reativacao"
+                            ? c.total < m
+                              ? "is-discount"
+                              : c.total > m
+                                ? "is-increase"
+                                : "is-neutral"
+                            : "is-increase"
+                        }`}
+                      >
+                        {mode === "reativacao"
+                          ? c.total === m
+                            ? "Igual à mensalidade"
+                            : `${c.total > m ? "+" : "−"}${brl(Math.abs(safe(c.total - m)))} vs. mensalidade`
+                          : mode === "vencimento"
+                            ? `+${brl(safe(c.total - m))} no 1º boleto`
+                            : `+${brl(c.rounded)} único + ${brl(c.difference)}/mês`}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="compare-grid">
+                    <div className="compare-col is-before">
+                      <span className="compare-tag">Cenário atual</span>
+                      {mode === "reativacao" ? (
+                        <>
+                          <strong>{brl(m)}</strong>
+                          <small>Mensalidade padrão (30d)</small>
+                          <em>Venc. base: {dateBR(due)}</em>
+                        </>
+                      ) : mode === "vencimento" ? (
+                        <>
+                          <strong>{brl(m)}</strong>
+                          <small>Mensalidade atual</small>
+                          <em>Venc. atual: {dateBR(oldDue)}</em>
+                        </>
+                      ) : (
+                        <>
+                          <strong>{brl(oldM)}</strong>
+                          <small>Plano anterior</small>
+                          <em>Vigência até {dateBR(upgradeDue)}</em>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="compare-arrow" aria-hidden="true">→</div>
+
+                    <div className="compare-col is-after">
+                      <span className="compare-tag">Cenário ajustado</span>
+                      {mode === "reativacao" ? (
+                        <>
+                          <strong>{brl(c.total)}</strong>
+                          <small>{c.usedDays + c.futureDays} dias proporcionais</small>
+                          <em>Próx. venc.: {dateBR(nextDue)}</em>
+                        </>
+                      ) : mode === "vencimento" ? (
+                        <>
+                          <strong>{brl(c.total)}</strong>
+                          <small>1ª fatura (+{c.days}d + taxa)</small>
+                          <em>Novo venc.: {dateBR(newDue)}</em>
+                        </>
+                      ) : (
+                        <>
+                          <strong>{brl(c.total)}</strong>
+                          <small>1ª fatura · depois {brl(newM)}/mês</small>
+                          <em>Venc.: {dateBR(upgradeDue)}</em>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="total-card">
                   <div className="total-card-bg" />
                   <div className="total-info">
@@ -1134,38 +1282,90 @@ export default function App() {
               <div className="heading-left">
                 <span className="step step-blue">03</span>
                 <div>
-                  <h3>Mensagem para envio ao cliente</h3>
-                  <p>Script gerado automaticamente pronto para colar no atendimento.</p>
+                  <h3>Mensagem e registro do atendimento</h3>
+                  <p>Alterne entre o formato para o cliente ou registro rápido de protocolo.</p>
                 </div>
               </div>
-              <button className={`copy-btn ${copied ? "is-copied" : ""}`} onClick={copy} disabled={!message}>
-                {copied ? (
-                  <>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    Mensagem copiada!
-                  </>
-                ) : (
-                  <>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                    Copiar mensagem
-                  </>
+              <div className="message-actions">
+                {channel !== "protocolo" && (
+                  <button
+                    type="button"
+                    className={`copy-proto-btn ${copiedProtocol ? "is-copied" : ""}`}
+                    onClick={copyProtocol}
+                    disabled={!messagesByChannel.protocolo}
+                    title="Copiar resumo em linha única para colar no protocolo do Voalle"
+                  >
+                    {copiedProtocol ? (
+                      <>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Protocolo copiado!
+                      </>
+                    ) : (
+                      <>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        Copiar p/ Protocolo
+                      </>
+                    )}
+                  </button>
                 )}
-              </button>
+                <button className={`copy-btn ${copied ? "is-copied" : ""}`} onClick={copy} disabled={!message}>
+                  {copied ? (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Mensagem copiada!
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                      Copiar mensagem
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            <div className="channel-bar" role="tablist" aria-label="Formato da mensagem">
+              <div className="channel-tabs">
+                {channels.map((ch) => (
+                  <button
+                    key={ch.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={channel === ch.id}
+                    className={`channel-tab ${channel === ch.id ? "active" : ""}`}
+                    onClick={() => {
+                      setChannel(ch.id);
+                      setCopied(false);
+                    }}
+                  >
+                    {ch.label}
+                  </button>
+                ))}
+              </div>
+              <span className="channel-hint">{channels.find((ch) => ch.id === channel)?.hint}</span>
+            </div>
+
             <textarea
-              className="message-box"
+              className={`message-box ${channel === "protocolo" ? "is-protocol" : ""}`}
               value={message}
               readOnly
               placeholder="A mensagem aparece aqui assim que todos os campos obrigatórios estiverem preenchidos e as datas estiverem em ordem."
             />
             <div className="message-footer">
-              <span>Texto pronto para envio ao cliente — revise os valores e datas antes de encaminhar.</span>
-              <span className="wa-badge">● Formatação otimizada para WhatsApp</span>
+              <span>Texto pronto para uso — revise os valores e datas antes de encaminhar ou registrar.</span>
+              <span className="wa-badge">● {channels.find((ch) => ch.id === channel)?.badge}</span>
             </div>
           </section>
 
