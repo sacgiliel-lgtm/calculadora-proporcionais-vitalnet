@@ -1194,7 +1194,7 @@ export default function App() {
                         {mode === "reativacao"
                           ? c.total === m
                             ? "Igual à mensalidade"
-                            : `${c.total > m ? "+" : "−"}${brl(Math.abs(safe(c.total - m)))} vs. mensalidade`
+                            : `${c.total > m ? "+" : "−"}${brl(Math.abs(safe(c.total - m)))} em relação à mensalidade`
                           : mode === "vencimento"
                             ? `+${brl(safe(c.total - m))} no 1º boleto`
                             : `+${brl(c.rounded)} único + ${brl(c.difference)}/mês`}
