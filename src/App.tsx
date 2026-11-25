@@ -1150,6 +1150,32 @@ export default function App() {
                   </>
                 )}
 
+                <div className="total-card">
+                  <div className="total-card-bg" />
+                  <div className="total-info">
+                    <small>
+                      {mode === "reativacao"
+                        ? "VALOR PROPORCIONAL A PAGAR"
+                        : mode === "vencimento"
+                          ? "PRÓXIMO PAGAMENTO (COM TAXA)"
+                          : "PRÓXIMA MENSALIDADE + PROPORCIONAL"}
+                    </small>
+                    <strong>{brl(c.total)}</strong>
+                    <span>
+                      {mode === "reativacao"
+                        ? "Valor final após arredondamento"
+                        : mode === "vencimento"
+                          ? "Mensalidade + proporcional + R$ 1,20"
+                          : "Nova mensalidade + proporcional único"}
+                    </span>
+                  </div>
+                  <div className="total-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                </div>
+
                 <div className="compare-card" aria-label="Resumo comparativo antes e depois">
                   <div className="compare-head">
                     <span className="compare-title">Comparativo antes × depois</span>
@@ -1224,32 +1250,6 @@ export default function App() {
                         </>
                       )}
                     </div>
-                  </div>
-                </div>
-
-                <div className="total-card">
-                  <div className="total-card-bg" />
-                  <div className="total-info">
-                    <small>
-                      {mode === "reativacao"
-                        ? "VALOR PROPORCIONAL A PAGAR"
-                        : mode === "vencimento"
-                          ? "PRÓXIMO PAGAMENTO (COM TAXA)"
-                          : "PRÓXIMA MENSALIDADE + PROPORCIONAL"}
-                    </small>
-                    <strong>{brl(c.total)}</strong>
-                    <span>
-                      {mode === "reativacao"
-                        ? "Valor final após arredondamento"
-                        : mode === "vencimento"
-                          ? "Mensalidade + proporcional + R$ 1,20"
-                          : "Nova mensalidade + proporcional único"}
-                    </span>
-                  </div>
-                  <div className="total-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
                   </div>
                 </div>
 
