@@ -209,7 +209,7 @@ export default function App() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    const url = import.meta.env.VITE_ACCESS_WEBHOOK_URL || "COLE_SUA_URL_DE_WEBHOOK_AQUI";
+    const url = (import.meta as { env?: { VITE_ACCESS_WEBHOOK_URL?: string } }).env?.VITE_ACCESS_WEBHOOK_URL || "COLE_SUA_URL_DE_WEBHOOK_AQUI";
     if (!url.startsWith("http")) return;
     fetch(url, {
       method: "POST",
