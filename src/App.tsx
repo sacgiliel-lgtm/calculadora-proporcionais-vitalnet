@@ -209,6 +209,17 @@ export default function App() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
+    const url = import.meta.env.VITE_ACCESS_WEBHOOK_URL || "COLE_SUA_URL_DE_WEBHOOK_AQUI";
+    if (!url.startsWith("http")) return;
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: `👀 Novo acesso ao Portal SAC · ${new Date().toLocaleString("pt-BR")}` }),
+      keepalive: true,
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     try {
       localStorage.setItem("vitalnet-proportional-history", JSON.stringify(history));
     } catch {
