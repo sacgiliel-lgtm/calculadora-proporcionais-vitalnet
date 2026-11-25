@@ -214,7 +214,7 @@ export default function App() {
     fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: `👀 Novo acesso ao Portal SAC · ${new Date().toLocaleString("pt-BR")}` }),
+      body: JSON.stringify({ content: `👀 Novo acesso à calculadora · ${new Date().toLocaleString("pt-BR")}` }),
       keepalive: true,
     }).catch(() => {});
   }, []);
