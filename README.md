@@ -5,9 +5,9 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646cff?logo=vite&logoColor=white)
 ![Uso](https://img.shields.io/badge/uso-interno-0f2851)
 
-Aplicação web **interna** da **Vital Net Telecom** para a equipe de **Atendimento ao Cliente (SAC) e Cobrança**. Ela calcula valores proporcionais, mostra a memória de cálculo passo a passo e gera uma mensagem padronizada, pronta para colar no WhatsApp, para o assinante.
+Aplicação web **interna** da **Vital Net Telecom** para a equipe de **Atendimento ao Cliente (SAC) e Cobrança**. Ela calcula valores proporcionais, mostra a memória de cálculo passo a passo, exibe o comparativo entre cenários e gera mensagens padronizadas prontas para envio ao cliente ou registro de protocolo no ERP (Voalle).
 
-> **Aviso:** o sistema é de uso exclusivamente interno. Telas, regras e valores não devem ser divulgados a pessoas externas à empresa. Somente a mensagem gerada no passo 03 se destina ao cliente.
+> **Aviso:** o sistema é de uso exclusivamente interno. Telas, regras e valores não devem ser divulgados a pessoas externas à empresa. Somente as mensagens voltadas ao cliente geradas no passo 03 se destinam ao assinante.
 
 ## Sumário
 
@@ -38,9 +38,9 @@ A calculadora resolve isso em três etapas, todas atualizadas em tempo real:
 
 | Etapa | Painel | O que entrega |
 |:-----:|--------|---------------|
-| **01** | Parâmetros da simulação | Formulário com validação visual de campos obrigatórios e de datas |
-| **02** | Memória de cálculo | Valor diário, dias contados, subtotal, arredondamento e total |
-| **03** | Mensagem para o cliente | Script completo, com botão de cópia e formatação para WhatsApp |
+| **01** | Parâmetros da simulação | Formulário com validação visual de campos obrigatórios, dicas contextuais e avisos de datas |
+| **02** | Memória de cálculo | Valor diário, dias contados, subtotal bruto, arredondamento, valor total e comparativo *antes × depois* |
+| **03** | Mensagem e registro do atendimento | Scripts prontos para **WhatsApp**, **Protocolo / ERP** e **Formal / E-mail**, com botões de cópia rápida |
 
 ## Premissas gerais de cálculo
 
@@ -52,6 +52,7 @@ A calculadora resolve isso em três etapas, todas atualizadas em tempo real:
 round5(valor) = Math.round(valor / 5) * 5
 ```
 
+- **Transparência interna vs. comunicação externa.** Na memória de cálculo e no resumo de **Protocolo / ERP**, tanto o valor bruto quanto o valor arredondado são exibidos. Nas mensagens destinadas ao cliente (**WhatsApp** e **Formal / E-mail**), o texto apresenta diretamente o valor final já arredondado, sem citar o valor bruto nem mencionar que houve arredondamento.
 - **Datas sem fuso horário.** Datas são lidas como `AAAA-MM-DD` e fixadas ao meio-dia local. A diferença em dias não sofre efeito de horário de verão nem de fuso.
 - **Dia a dia inteiro.** A diferença entre duas datas é sempre um número inteiro de dias.
 
@@ -66,11 +67,11 @@ Regulariza e reativa conexões bloqueadas por inadimplência. Soma os dias em qu
 | Campo | Símbolo | Obrigatório | Observação |
 |-------|:-------:|:-----------:|------------|
 | Valor da mensalidade | `M` | Sim | Aceita formato brasileiro (`80,00`, `1.250,50`) |
-| 1º vencimento em atraso | `D_venc` | Sim | Vencimento do primeiro boleto em atraso, o que originou o bloqueio |
+| Vencimento do boleto considerado | `D_venc` | Sim | Vencimento do primeiro boleto em atraso que ocasionou o bloqueio do contrato |
 | Data efetiva do bloqueio | `D_bloq` | Sim | Quando o sistema bloqueou de fato, considerando finais de semana e feriados |
 | Data da reativação | `D_reat` | Sim | Já vem preenchida com a data de hoje |
 | Próximo vencimento | `D_prox` | Sim | |
-| Dias adicionais manuais | `Dias_extra` | Não | Número inteiro ≥ 0, útil para dias de bloqueio/desbloqueio ou outros ajustes |
+| Dias adicionais manuais | `Dias_extra` | Não | Número inteiro ≥ 0, ideal para casos de desbloqueios ou ajustes extras de uso |
 
 **Fórmulas**
 
@@ -180,7 +181,7 @@ Total     = 160,00 + 30,00  = R$ 190,00
 
 ## Validações e avisos
 
-A aplicação separa **erros** (bloqueiam a geração da mensagem e o salvamento) de **avisos** (só alertam).
+A aplicação separa **erros** (bloqueiam a geração das mensagens e o salvamento) de **avisos** (apenas alertam).
 
 | Situação | Tipo | Comportamento |
 |----------|:----:|---------------|
@@ -192,23 +193,28 @@ A aplicação separa **erros** (bloqueiam a geração da mensagem e o salvamento
 | Reativação: bloqueio **antes** do vencimento | Aviso | Campo em amarelo, badge `Confira`; nenhum dia de uso pós-vencimento é contado |
 | Reativação: reativação **depois** do próximo vencimento | Aviso | Campo em amarelo, badge `Confira`; nenhum dia futuro é contado |
 
-Enquanto houver erro, o botão **Salvar simulação no histórico** e o botão **Copiar mensagem** ficam desabilitados e a caixa de mensagem permanece vazia. Isso evita copiar um texto com `R$ 0,00` e datas `—`. Os avisos de data aparecem também como resumo no painel de resultado, e o cálculo segue disponível.
+Enquanto houver erro, os botões **Salvar simulação no histórico**, **Copiar mensagem** e **Copiar p/ Protocolo** ficam desabilitados e a caixa de texto permanece vazia. Isso evita copiar um texto com `R$ 0,00` e datas `—`. Os avisos de data aparecem também como resumo no painel de resultado, e o cálculo segue disponível.
 
 ## Funcionalidades da interface
 
 - **Três módulos de cálculo** na barra lateral: Reativação, Troca de vencimento e Upgrade de plano.
-- **Cálculo em tempo real:** memória de cálculo e mensagem atualizam a cada digitação.
+- **Cálculo em tempo real:** memória de cálculo, comparativo e mensagens atualizam a cada digitação.
 - **Dados de exemplo sinalizados:** os campos iniciam com valores demonstrativos marcados com a badge **`Exemplo`** e um banner no topo do formulário. A badge some do campo assim que ele é editado.
   - **`Limpar campos`** zera o formulário do módulo ativo para um novo atendimento.
   - **`Restaurar exemplo`** devolve os valores demonstrativos.
   - A **Data da reativação** nunca é tratada como exemplo: vem com a data de hoje, inclusive depois de `Limpar campos`.
-- **Dias adicionais manuais** (Reativação): campo opcional para somar dias de desbloqueio ou ajuste. A soma aparece discriminada na memória de cálculo, na mensagem e no histórico (por exemplo `9 (8+1) + 5 dias`).
-- **Dicas contextuais (`?`)** em campos cuja regra não é óbvia, como o 1º vencimento em atraso.
+- **Dias adicionais manuais** (Reativação): campo opcional para somar dias de desbloqueio ou ajuste. A soma aparece discriminada na memória de cálculo, nas mensagens e no histórico (por exemplo `9 (8+1) + 5 dias`).
+- **Comparativo antes × depois:** cartão posicionado logo abaixo do total a pagar (`total-card`), contrastando o **Cenário atual** com o **Cenário ajustado** e exibindo um *badge* com a diferença financeira entre eles.
+- **Múltiplos formatos de mensagem e registro (Passo 03):**
+  - **WhatsApp:** texto direto e claro formatado para envio ao cliente, exibindo diretamente o valor final arredondado (sem citar valor bruto ou arredondamento).
+  - **Protocolo / ERP:** resumo técnico em linha única otimizado para colar no relato do atendimento no Voalle, mantendo os valores bruto e arredondado. Pode ser copiado a qualquer momento pelo botão de atalho **`Copiar p/ Protocolo`**, mesmo enquanto outra aba estiver ativa.
+  - **Formal / E-mail:** texto estruturado para comunicação formal ao assinante, também apresentando diretamente o valor final arredondado.
+  - **Aviso interno no rodapé do painel:** lembra o atendente quando o texto exibe apenas o valor final arredondado (abas de cliente) ou ambos os valores (aba de protocolo).
+- **Dicas contextuais (`?`)** em campos cuja regra não é óbvia, como o *Vencimento do boleto considerado*.
 - **Modal "Como funciona o cálculo":** explica passo a passo a conta com os valores reais da simulação ativa. Fecha pelo `×`, por clique fora ou pela tecla `Esc`.
-- **Mensagem pronta para o cliente:** texto completo e específico de cada módulo, com botão **`Copiar mensagem`** (Clipboard API) e confirmação visual. Se a cópia automática falhar, o aviso orienta a copiar manualmente.
 - **Histórico local persistente:** guarda até **60** simulações, as mais recentes primeiro. Abre numa **gaveta lateral** (fecha com `×`, clique fora ou `Esc`) e permite limpar tudo, com confirmação.
 - **Avisos (toasts)** que desaparecem sozinhos após alguns segundos e podem ser dispensados com um clique.
-- **Acessibilidade básica:** `aria-label`s, `role="dialog"`, foco movido para o botão de fechar ao abrir a gaveta, tooltips acessíveis por teclado e respeito a `prefers-reduced-motion`.
+- **Acessibilidade básica:** `aria-label`s, `role="dialog"`, `role="tablist"`, foco movido para o botão de fechar ao abrir a gaveta, tooltips acessíveis por teclado e respeito a `prefers-reduced-motion`.
 - **Design responsivo** para desktop e celular (breakpoints em 1100 px e 760 px).
 
 ## Tecnologias
@@ -232,7 +238,7 @@ calculadora-proporcionais-vitalnet/
 ├── public/
 │   └── favicon.svg            # Cópia do favicon (não é usada: veja "Limitações conhecidas")
 ├── src/
-│   ├── App.tsx                # Cálculos, estados, validações, modal, gaveta de histórico e mensagens
+│   ├── App.tsx                # Cálculos, estados, validações, comparativo, modal, gaveta de histórico e mensagens por canal
 │   ├── index.css              # Estilos globais, tema, responsividade e estados de validação
 │   └── main.tsx               # Ponto de entrada React
 ├── index.html                 # Documento HTML raiz (pt-BR, meta tags e favicon)
@@ -301,20 +307,21 @@ Todas as regras ficam em `src/App.tsx`:
 | Múltiplo de arredondamento (`5`) | Função `round5` |
 | Taxa de boleto (`R$ 1,20`) | Constante `fee = 1.2` em `calc` (modo `vencimento`), mais as ocorrências literais `R$ 1,20` nas mensagens, no modal e na tela de resultado |
 | Valores de exemplo | Objeto `DEFAULTS` |
-| Textos enviados ao cliente | Template em `message` (`useMemo`) |
+| Textos por canal (`whatsapp`, `protocolo`, `formal`) | Objeto `messagesByChannel` (`useMemo`) |
 | Limite do histórico (60) | `.slice(0, 60)` em `save` |
-| Chave do `localStorage` | `"vitalnet-proportional-history"` |
+| Chaves do `localStorage` | `"vitalnet-proportional-history"` e `"vitalnet-proportional-channel"` |
 | Cores e tipografia | Variáveis `:root` em `src/index.css` |
 
-Ao mudar uma regra, ajuste também os textos do modal "Como funciona o cálculo" e da mensagem, para que a explicação continue batendo com a conta.
+Ao mudar uma regra, ajuste também os textos do modal "Como funciona o cálculo" e das mensagens, para que a explicação continue batendo com a conta.
 
 ## Privacidade e armazenamento de dados
 
-- **Nada é enviado a servidor.** Todo o cálculo roda no navegador, e a aplicação não faz requisições a APIs próprias.
-- O **histórico** fica apenas no `localStorage` do navegador e do dispositivo em uso, na chave `vitalnet-proportional-history`. Ele guarda tipo de cálculo, data, total e um resumo (dias e valores). **Não** guarda nome, CPF, contrato nem outro dado do cliente.
+- **Cálculos locais no navegador.** Todo o cálculo roda localmente no navegador do atendente, sem envio de dados financeiros ou cadastrais de clientes a servidores externos.
+- **Telemetria opcional de acesso.** Caso a variável de ambiente `VITE_ACCESS_WEBHOOK_URL` esteja configurada com uma URL HTTP válida, é enviado apenas um aviso simples de acesso contendo data e hora, sem qualquer dado da simulação ou do cliente.
+- **Preferências e histórico local.** O histórico fica armazenado exclusivamente no `localStorage` do navegador em uso na chave `vitalnet-proportional-history` (guardando apenas tipo de cálculo, data, total e resumo numérico, sem nome, CPF ou contrato), e a aba de mensagem selecionada é lembrada na chave `vitalnet-proportional-channel`.
 - Em computadores compartilhados, use **Limpar tudo** na gaveta de histórico ao fim do turno. O histórico não sincroniza entre aparelhos.
-- Em abas anônimas ou com o armazenamento bloqueado, o app continua funcionando, mas sem persistir o histórico.
-- A única chamada externa é o carregamento das fontes do Google Fonts.
+- Em abas anônimas ou com o armazenamento bloqueado, o app continua funcionando normalmente, apenas sem persistir histórico ou preferência de aba.
+- A única chamada externa padrão é o carregamento das fontes do Google Fonts.
 
 ## Limitações conhecidas
 
@@ -331,6 +338,7 @@ Ao mudar uma regra, ajuste também os textos do modal "Como funciona o cálculo"
 - Confira o **bloqueio efetivo** no sistema (fins de semana e feriados deslocam a data) antes de preencher a Reativação.
 - Para **desbloqueios** ou dias de uso fora do período normal, use o campo de dias adicionais manuais e confirme a conta no modal.
 - No **Upgrade de plano**, confirme a renovação contratual de 12 meses e solicite a documentação do titular antes de gerar o link de assinatura, como indica o script automático.
+- Use **`Copiar p/ Protocolo`** para registrar rapidamente os valores bruto e arredondado no atendimento do Voalle, e envie ao cliente o texto das abas **WhatsApp** ou **Formal / E-mail**.
 - Use **`Como funciona o cálculo`** para explicar ao assinante como o valor foi composto e para treinar novos colaboradores.
 - Revise valores e datas na mensagem antes de enviá-la ao cliente.
 
