@@ -241,15 +241,12 @@ export default function App() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    const url = (import.meta as { env?: { VITE_ACCESS_WEBHOOK_URL?: string } }).env?.VITE_ACCESS_WEBHOOK_URL || "COLE_SUA_URL_DE_WEBHOOK_AQUI";
-    if (!url.startsWith("http")) return;
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: `👀 Novo acesso à calculadora · ${new Date().toLocaleString("pt-BR")}` }),
-      keepalive: true,
-    }).catch(() => {});
-  }, []);
+  const url = (import.meta as { env?: { VITE_ACCESS_NOTIFY_URL?: string } }).env?.VITE_ACCESS_NOTIFY_URL;
+  if (!url || sessionStorage.getItem("vitalnet-notified")) return;
+  fetch(url, { method: "POST", keepalive: true })
+    .then(() => sessionStorage.setItem("vitalnet-notified", "1"))
+    .catch(() => {});
+}, []);
 
   useEffect(() => {
     try {
