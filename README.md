@@ -85,7 +85,7 @@ Regulariza e reativa conexões bloqueadas por inadimplência. Soma os dias em qu
    V_uso     = Dias_uso * V_dia
 
 3. Dias futuros (contagem inclusiva: conta o dia da reativação e o do próximo vencimento)
-   Dias_fut = max(0, (D_prox - D_reat) + 1)
+   Dias_fut = min(30, max(0, (D_prox - D_reat) + 1))   (teto de 30 dias)
    V_fut    = Dias_fut * V_dia
 
 4. Total a pagar
@@ -192,6 +192,7 @@ A aplicação separa **erros** (bloqueiam a geração das mensagens e o salvamen
 | Upgrade: próximo vencimento sem dias restantes | Erro | Cálculo inválido (0 dias) |
 | Reativação: bloqueio **antes** do vencimento | Aviso | Campo em amarelo, badge `Confira`; nenhum dia de uso pós-vencimento é contado |
 | Reativação: reativação **depois** do próximo vencimento | Aviso | Campo em amarelo, badge `Confira`; nenhum dia futuro é contado |
+| Reativação: próximo vencimento a **mais de 30 dias** da reativação | Aviso | Campo em amarelo; a contagem futura é limitada a 30 dias (a mensagem informa o teto) |
 
 Enquanto houver erro, os botões **Salvar simulação no histórico**, **Copiar mensagem** e **Copiar p/ Protocolo** ficam desabilitados e a caixa de texto permanece vazia. Isso evita copiar um texto com `R$ 0,00` e datas `—`. Os avisos de data aparecem também como resumo no painel de resultado, e o cálculo segue disponível.
 
