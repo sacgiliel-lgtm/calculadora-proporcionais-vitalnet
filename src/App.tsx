@@ -38,6 +38,8 @@ const dayDiff = (a: string, b: string) => Math.round((dateFrom(b).getTime() - da
 const dateBR = (s: string) => (s ? dateFrom(s).toLocaleDateString("pt-BR") : "—");
 const moneyNumber = (s: string) => Number(s.replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, "")) || 0;
 const round5 = (n: number) => Math.round(n / 5) * 5;
+// Reativação: teto de dias cobrados entre a reativação e o próximo vencimento
+const MAX_FUTURE_DAYS = 30;
 const safe = (n: number) => Number(n.toFixed(2));
 
 const DEFAULTS = {
@@ -310,12 +312,14 @@ export default function App() {
 
   // Avisos (não bloqueiam o cálculo): datas que contradizem o fluxo normal da reativação
   const dateWarnings = useMemo(() => {
-    const w: { blocked?: string; reactivation?: string } = {};
+    const w: { blocked?: string; reactivation?: string; nextDue?: string } = {};
     if (mode !== "reativacao") return w;
     if (due && blocked && dayDiff(due, blocked) < 0)
       w.blocked = "O bloqueio está antes do vencimento: nenhum dia de uso após o vencimento será contado.";
     if (reactivation && nextDue && dayDiff(reactivation, nextDue) < 0)
       w.reactivation = "A reativação está depois do próximo vencimento: nenhum dia futuro será contado.";
+    if (reactivation && nextDue && dayDiff(reactivation, nextDue) + 1 > MAX_FUTURE_DAYS)
+      w.nextDue = `O próximo vencimento está a ${dayDiff(reactivation, nextDue) + 1} dias da reativação: serão cobrados no máximo ${MAX_FUTURE_DAYS} dias.`;
     return w;
   }, [mode, due, blocked, reactivation, nextDue]);
   const hasDateWarnings = Object.keys(dateWarnings).length > 0;
@@ -326,7 +330,9 @@ export default function App() {
       const baseUsedDays = due && blocked ? Math.max(0, dayDiff(due, blocked)) : 0;
       const safeExtraDays = Math.max(0, Math.floor(Number(extraDays) || 0));
       const usedDays = baseUsedDays + safeExtraDays;
-      const futureDays = reactivation && nextDue ? Math.max(0, dayDiff(reactivation, nextDue) + 1) : 0;
+      const futureDaysRaw = reactivation && nextDue ? Math.max(0, dayDiff(reactivation, nextDue) + 1) : 0;
+      const futureDays = Math.min(futureDaysRaw, MAX_FUTURE_DAYS);
+      const futureCapped = futureDaysRaw > MAX_FUTURE_DAYS;
       const used = safe(daily * usedDays),
         future = safe(daily * futureDays),
         raw = safe(used + future),
@@ -337,6 +343,8 @@ export default function App() {
         extraDays: safeExtraDays,
         usedDays,
         futureDays,
+        futureDaysRaw,
+        futureCapped,
         used,
         future,
         raw,
@@ -374,10 +382,12 @@ export default function App() {
           ? ` (sendo ${c.baseUsedDays} ${c.baseUsedDays === 1 ? "dia" : "dias"} do período até o bloqueio + ${c.extraDays} ${c.extraDays === 1 ? "dia adicional" : "dias adicionais"} de ajuste/desbloqueios)`
           : "";
       const extraShort = c.extraDays > 0 ? ` (${c.baseUsedDays}+${c.extraDays})` : "";
+      const capNote = c.futureCapped ? ` (limitado ao máximo de ${MAX_FUTURE_DAYS} dias)` : "";
+      const capShort = c.futureCapped ? ` (teto ${MAX_FUTURE_DAYS}d; reais: ${c.futureDaysRaw})` : "";
       return {
-        whatsapp: `Verifiquei que a sua mensalidade é no valor de ${brl(m)}.\n\nPara regularizar e reativar a conexão, consideramos os dias em que o serviço foi utilizado após o vencimento do primeiro boleto e o período até o próximo ciclo.\n\nA sua conexão permaneceu ativa até o dia ${dateBR(blocked)} (${c.usedDays} dias após o vencimento de ${dateBR(due)}${extraNote}), e a ativação da conexão de ${dateBR(reactivation)} até o próximo vencimento em ${dateBR(nextDue)} corresponde a ${c.futureDays} dias de uso.\n\nConsiderando a base diária de ${brl(c.daily)} (${brl(m)} ÷ 30 dias), o valor proporcional calculado para regularização é de *${brl(c.rounded)}*.\n\nEsse valor cobre o período em que o serviço foi utilizado e o período até o próximo vencimento.`,
-        protocolo: `[CÁLCULO REATIVAÇÃO] Mensalidade: ${brl(m)} (${brl(c.daily)}/dia) | Venc. considerado: ${dateBR(due)} | Bloqueio: ${dateBR(blocked)} | Reativação: ${dateBR(reactivation)} | Próx. venc.: ${dateBR(nextDue)} | Dias: ${c.usedDays}${extraShort} usados + ${c.futureDays} futuros = ${c.usedDays + c.futureDays}d | Bruto: ${brl(c.raw)} → Arredondado: ${brl(c.rounded)}.`,
-        formal: `Prezado(a),\n\nInformamos o detalhamento referente à reativação do seu contrato, cuja mensalidade regular é de ${brl(m)} (equivalente a ${brl(c.daily)} por dia, considerando a base de 30 dias):\n\n• Período utilizado após o vencimento (${dateBR(due)} até ${dateBR(blocked)}): ${c.usedDays} dias${extraNote}.\n• Período da reativação até o próximo vencimento (${dateBR(reactivation)} até ${dateBR(nextDue)}): ${c.futureDays} dias.\n\nO valor proporcional para regularização é de ${brl(c.rounded)}. Após a quitação deste valor, as cobranças seguintes seguem normalmente no valor integral de ${brl(m)}.\n\nPermanecemos à disposição para qualquer esclarecimento.`,
+        whatsapp: `Verifiquei que a sua mensalidade é no valor de ${brl(m)}.\n\nPara regularizar e reativar a conexão, consideramos os dias em que o serviço foi utilizado após o vencimento do primeiro boleto e o período até o próximo ciclo.\n\nA sua conexão permaneceu ativa até o dia ${dateBR(blocked)} (${c.usedDays} dias após o vencimento de ${dateBR(due)}${extraNote}), e a ativação da conexão de ${dateBR(reactivation)} até o próximo vencimento em ${dateBR(nextDue)} corresponde a ${c.futureDays} dias de uso${capNote}.\n\nConsiderando a base diária de ${brl(c.daily)} (${brl(m)} ÷ 30 dias), o valor proporcional calculado para regularização é de *${brl(c.rounded)}*.\n\nEsse valor cobre o período em que o serviço foi utilizado e o período até o próximo vencimento.`,
+        protocolo: `[CÁLCULO REATIVAÇÃO] Mensalidade: ${brl(m)} (${brl(c.daily)}/dia) | Venc. considerado: ${dateBR(due)} | Bloqueio: ${dateBR(blocked)} | Reativação: ${dateBR(reactivation)} | Próx. venc.: ${dateBR(nextDue)} | Dias: ${c.usedDays}${extraShort} usados + ${c.futureDays} futuros${capShort} = ${c.usedDays + c.futureDays}d | Bruto: ${brl(c.raw)} → Arredondado: ${brl(c.rounded)}.`,
+        formal: `Prezado(a),\n\nInformamos o detalhamento referente à reativação do seu contrato, cuja mensalidade regular é de ${brl(m)} (equivalente a ${brl(c.daily)} por dia, considerando a base de 30 dias):\n\n• Período utilizado após o vencimento (${dateBR(due)} até ${dateBR(blocked)}): ${c.usedDays} dias${extraNote}.\n• Período da reativação até o próximo vencimento (${dateBR(reactivation)} até ${dateBR(nextDue)}): ${c.futureDays} dias${capNote}.\n\nO valor proporcional para regularização é de ${brl(c.rounded)}. Após a quitação deste valor, as cobranças seguintes seguem normalmente no valor integral de ${brl(m)}.\n\nPermanecemos à disposição para qualquer esclarecimento.`,
       };
     }
     if (mode === "vencimento") {
@@ -561,6 +571,7 @@ export default function App() {
             }}
             type="date"
             isSample={sampleFlags.nextDue}
+            warning={dateWarnings.nextDue}
           />
           <div className="extra-days-box">
             <div className="extra-days-head">
@@ -600,7 +611,7 @@ export default function App() {
           <div className="notice">
             <span className="notice-icon">ℹ</span>
             <div>
-              A contagem futura inclui o dia da reativação e o próximo vencimento. O período em atraso conta a partir do dia seguinte ao vencimento até o bloqueio{extraDays > 0 ? `, somando +${extraDays} ${extraDays === 1 ? "dia manual" : "dias manuais"} (total de ${c.usedDays} dias usados)` : ""}.
+              A contagem futura inclui o dia da reativação e o próximo vencimento, limitada a {MAX_FUTURE_DAYS} dias. O período em atraso conta a partir do dia seguinte ao vencimento até o bloqueio{extraDays > 0 ? `, somando +${extraDays} ${extraDays === 1 ? "dia manual" : "dias manuais"} (total de ${c.usedDays} dias usados)` : ""}.
             </div>
           </div>
         </>
@@ -745,7 +756,7 @@ export default function App() {
             <div>
               <strong>Dias da reativação até o próximo vencimento (inclusivo)</strong>
               <p>
-                Contamos da data da reativação (<b>{dateBR(reactivation)}</b>) até o próximo vencimento (<b>{dateBR(nextDue)}</b>) incluindo ambos os dias (<code>+ 1</code>) e multiplicamos pelo valor diário.
+                Contamos da data da reativação (<b>{dateBR(reactivation)}</b>) até o próximo vencimento (<b>{dateBR(nextDue)}</b>) incluindo ambos os dias (<code>+ 1</code>), limitamos a <b>{MAX_FUTURE_DAYS} dias</b>{c.futureCapped ? <> (o período real seria de <b>{c.futureDaysRaw} dias</b>)</> : ""} e multiplicamos pelo valor diário.
               </p>
               <code>
                 {c.futureDays} dias × {brl(c.daily)} = {brl(c.future)}
@@ -1095,7 +1106,7 @@ export default function App() {
                       }
                       value={brl(c.used)}
                     />
-                    <ResultLine label={`${c.futureDays} dias até o próximo vencimento`} value={brl(c.future)} />
+                    <ResultLine label={`${c.futureDays} dias até o próximo vencimento${c.futureCapped ? " (teto)" : ""}`} value={brl(c.future)} />
                     <ResultLine label="Subtotal antes do arredondamento" value={brl(c.raw)} muted />
                     <div className="rounding-note">
                       <span>✦</span> Arredondado para o múltiplo de <strong>R$ 5,00</strong> mais próximo
